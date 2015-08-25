@@ -1,0 +1,3 @@
+[submodule "third_party/JSIL"]
+	path = third_party/JSIL
+	url = https://github.com/sq/JSIL

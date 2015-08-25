@@ -1,0 +1,11 @@
+*.suo
+obj
+bin
+output
+third_party/tests/*.exe
+third_party/tests/*.dll
+third_party/tests/*.xml
+third_party/tests/*.pdb
+third_party/tests/*.mdb
+*.log
+*.user
