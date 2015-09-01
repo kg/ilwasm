@@ -117,7 +117,6 @@ namespace WasmSExprEmitter {
 
                 case "System.Void Wasm.Heap::SetHeapSize(System.Int32)": {
                     var td = caller.DeclaringType.Resolve();
-
                     var hs = WasmUtil.HeapSizes;
                     if (hs.ContainsKey(td))
                         throw new Exception("Heap size for type " + td.FullName + " already set");

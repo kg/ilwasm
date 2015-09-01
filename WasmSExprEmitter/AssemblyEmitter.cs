@@ -16,10 +16,35 @@ namespace WasmSExprEmitter {
         public readonly AssemblyDefinition Assembly;
         public readonly JavascriptFormatter Formatter;
 
+        private enum PrecedingType {
+            None,
+            Function,
+            Export,
+            Global,
+            Memory,
+            TopLevel
+        }
+
+        private PrecedingType Preceding;
+
         public WasmSExprAssemblyEmitter (AssemblyTranslator translator, AssemblyDefinition assembly, JavascriptFormatter formatter) {
             Translator = translator;
             Assembly = assembly;
             Formatter = formatter;
+        }
+
+        private void Switch (PrecedingType newType, bool neighborSpacing = false) {
+            Formatter.ConditionalNewLine();
+
+            var prior = Preceding;
+            Preceding = newType;
+
+            if (prior == PrecedingType.None)
+                return;
+            else if ((prior == newType) && !neighborSpacing)
+                return;
+
+            Formatter.NewLine();
         }
 
         public void BeginEmitTypeDeclaration (TypeDefinition typedef) {
@@ -50,8 +75,8 @@ namespace WasmSExprEmitter {
                 int heapSize;
 
                 if (WasmUtil.HeapSizes.TryGetValue(Assembly.EntryPoint.DeclaringType, out heapSize)) {
-                    Formatter.ConditionalNewLine();
-                    Formatter.NewLine();
+                    Switch(PrecedingType.Memory);
+            
                     Formatter.WriteRaw("(memory {0} {0})", heapSize);
                     Formatter.NewLine();
                 }
@@ -76,6 +101,8 @@ namespace WasmSExprEmitter {
 
             var astEmitter = (AstEmitter)EntryPointAstEmitter;
             var mainEmitter = new AstEmitter(Formatter, astEmitter.JSIL, astEmitter.TypeSystem, astEmitter.TypeInfo, astEmitter.Configuration, isTopLevel: true);
+
+            Switch(PrecedingType.TopLevel);
 
             var body = mainExpression.Body;
             foreach (var stmt in body.Statements) {
@@ -107,9 +134,10 @@ namespace WasmSExprEmitter {
                 if ((ap.Count == 1) && (ap[0].Value is string))
                     exportName = (string)ap[0].Value;
 
-                Formatter.NewLine();
+                Switch(PrecedingType.Export);
+
                 Formatter.WriteRaw("(export \"{0}\" ${1})", exportName, name); 
-                Formatter.NewLine();
+                Formatter.ConditionalNewLine();
             }
         }
 
@@ -127,9 +155,10 @@ namespace WasmSExprEmitter {
             if (typeKeyword == null)
                 return;
 
+            Switch(PrecedingType.Global);
+
             Formatter.WriteRaw("(global ${0} {1})", WasmUtil.FormatMemberName(field), typeKeyword);
-            Formatter.NewLine();
-            Formatter.NewLine();
+            Formatter.ConditionalNewLine();
         }
 
         public void EmitConstant (DecompilerContext context, IAstEmitter astEmitter, FieldDefinition field, JSRawOutputIdentifier dollar, JSExpression value) {
@@ -171,8 +200,8 @@ namespace WasmSExprEmitter {
 
             var name = WasmUtil.FormatMemberName(method);
 
-            Formatter.ConditionalNewLine();
-            Formatter.NewLine();
+            Switch(PrecedingType.Function, true);
+            
             Formatter.WriteRaw("(func ${0}", name);
             Formatter.Indent();
             Formatter.NewLine();
@@ -211,12 +240,12 @@ namespace WasmSExprEmitter {
                 Formatter.WriteRaw("(result {0})", returnType);
             }
 
-            Formatter.NewLine();
+            Formatter.ConditionalNewLine();
             Formatter.NewLine();
 
             astEmitter.Emit(function.Body);
 
-            Formatter.NewLine();
+            Formatter.ConditionalNewLine();
             Formatter.Unindent();
             Formatter.WriteRaw(")");
 
