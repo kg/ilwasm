@@ -11,8 +11,10 @@ public static class Program {
     public const int HeapSize = 1024;
     public const int MaxResultCount = 128;
 
-    public const int _ResultCount = 0;
-    public const int _Result  = 4;
+    [Export]
+    public static int ResultCount { get; set; }
+
+    public const int _Result  = 0;
 
     public const byte A = 1;
     public const byte C = 3;
@@ -23,9 +25,9 @@ public static class Program {
     }
 
     private static void AddResult (byte result) {
-        var count = I32[_ResultCount];
+        var count = ResultCount;
         U8[_Result, count] = result;
-        I32[_ResultCount] = count + 1;
+        ResultCount = count + 1;
     }
 
     private static void GotosInner () {
@@ -47,14 +49,9 @@ public static class Program {
 
     [Export("gotos")]
     public static void Gotos () {
-        I32[_ResultCount] = 0;
+        ResultCount = 0;
         Clear(_Result, MaxResultCount);
         GotosInner();
-    }
-
-    [Export("getResultCount")]
-    public static int GetResultCount () {
-        return I32[_ResultCount];
     }
 
     [Export("getResult")]
@@ -67,7 +64,7 @@ public static class Program {
 
         Invoke("gotos");
 
-        AssertEq(16, "getResultCount");
+        AssertEq(16, "get_ResultCount");
         AssertEq(A,  "getResult", 0);
         AssertEq(C,  "getResult", 1);
         AssertEq(C,  "getResult", 2);
@@ -85,5 +82,5 @@ public static class Program {
         AssertEq(C,  "getResult", 14);
         AssertEq(C,  "getResult", 15);
         AssertEq(0,  "getResult", 16);
-    }
+   }
 }

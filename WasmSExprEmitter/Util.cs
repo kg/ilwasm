@@ -11,9 +11,13 @@ namespace WasmSExprEmitter {
         public static readonly Dictionary<TypeDefinition, int> HeapSizes = new Dictionary<TypeDefinition, int>(new ReferenceComparer<TypeDefinition>());
 
         public static string FormatMemberName (IMemberDefinition member) {
-            return Util.EscapeIdentifier(
+            return EscapeIdentifier(
                 member.DeclaringType.Name + "_" + member.Name
             );
+        }
+
+        public static string EscapeIdentifier (string identifier) {
+            return Util.EscapeIdentifier(identifier).Replace("$", "_");
         }
 
         public static string PickTypeKeyword (TypeReference type) {

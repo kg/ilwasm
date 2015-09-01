@@ -157,7 +157,7 @@ namespace WasmSExprEmitter {
 
             Switch(PrecedingType.Global);
 
-            Formatter.WriteRaw("(global ${0} {1})", WasmUtil.FormatMemberName(field), typeKeyword);
+            Formatter.WriteRaw("(global ${0} {1})", WasmUtil.EscapeIdentifier(fieldInfo.Name), typeKeyword);
             Formatter.ConditionalNewLine();
         }
 
@@ -217,7 +217,7 @@ namespace WasmSExprEmitter {
                         variable.IsParameter 
                             ? "param" 
                             : "local",
-                        Util.EscapeIdentifier(kvp.Key), type
+                        WasmUtil.EscapeIdentifier(kvp.Key), type
                     );
 
                     if (v++ >= 3) {

@@ -1,4 +1,6 @@
 #!/bin/bash
 
-./compile-test.sh $1
-mono output/$1.exe
+TESTNAME=$1
+shift
+./compile-test.sh $TESTNAME
+mono output/$TESTNAME.exe "$@"

@@ -9,6 +9,15 @@ using JSIL.Meta;
 namespace Wasm {
     [JSExternal]
     public static class Test {
+        public static readonly bool QuietMode;
+
+        private static bool HeaderPrinted;
+
+        static Test () {
+            var args = Environment.GetCommandLineArgs();
+            QuietMode = args.Contains("--quiet");
+        }
+
         [JSIgnore]
         private class ExportTable {
             private static readonly Dictionary<Assembly, ExportTable> Cache = 
@@ -18,8 +27,23 @@ namespace Wasm {
                 new Dictionary<string, MethodInfo>(StringComparer.InvariantCultureIgnoreCase);
 
             private ExportTable (Assembly assembly) {
+                var flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
                 foreach (var type in assembly.GetTypes()) {
-                    var staticMethods = type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                    var staticMethods    = type.GetMethods(flags);
+                    var staticProperties = type.GetProperties(flags);
+
+                    foreach (var prop in staticProperties) {
+                        var exportAttr = prop.GetCustomAttribute<Module.ExportAttribute>();
+                        if (exportAttr == null)
+                            continue;
+
+                        var name = exportAttr.Name ?? prop.Name;
+
+                        if (prop.GetMethod != null)
+                            Exports.Add("get_" + name, prop.GetMethod);
+                        if (prop.SetMethod != null)
+                            Exports.Add("set_" + name, prop.SetMethod);
+                    }
 
                     foreach (var method in staticMethods) {
                         var exportAttr = method.GetCustomAttribute<Module.ExportAttribute>();
@@ -52,6 +76,15 @@ namespace Wasm {
             }
         }
 
+        private static void PrintHeader (Assembly assembly) {
+            if (HeaderPrinted)
+                return;
+
+            HeaderPrinted = true;
+            var testName = System.IO.Path.GetFileNameWithoutExtension(assembly.Location);
+            Console.WriteLine("// {0}", testName);
+        }
+
         [JSIsPure]
         public static void AssertEq (object expected, string exportedFunctionName, params object[] values) {
             var assembly = Assembly.GetCallingAssembly();
@@ -61,13 +94,21 @@ namespace Wasm {
             var expectedText = Convert.ToString(expected);
             var actualText   = Convert.ToString(result);
 
+            var passed = (expectedText == actualText);
+            if (!passed)
+                Environment.ExitCode = 1;
+
+            if (QuietMode && passed)
+                return;
+
+            PrintHeader(assembly);
             Console.WriteLine(
                 "(invoke \"{1}\" {2}){0}" +
                 "-> {3} '{4}' == '{5}'",
                 Environment.NewLine,
                 exportedFunctionName,
                 string.Join(" ", values),                
-                (expectedText == actualText)
+                passed
                     ? "pass"
                     : "fail",
                 expectedText,
@@ -87,6 +128,10 @@ namespace Wasm {
             var export = exports[exportedFunctionName];
             var result = export.Invoke(null, values);
 
+            if (QuietMode && (export.ReturnType.FullName == "System.Void"))
+                return;
+
+            PrintHeader(assembly);
             Console.WriteLine(
                 "(invoke \"{1}\" {2}){0}" +
                 "-> {3}",

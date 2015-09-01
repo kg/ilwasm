@@ -140,7 +140,7 @@ namespace WasmSExprEmitter {
 
             Formatter.WriteSExpr(
                 "label", (_) => {
-                    _.WriteRaw("${0} ", Util.EscapeIdentifier(label));
+                    _.WriteRaw("${0} ", WasmUtil.EscapeIdentifier(label));
                     _.NewLine();
                     writeBody(_);
                 },
@@ -448,28 +448,68 @@ namespace WasmSExprEmitter {
             );
         }
 
+        private string EscapedName (JSFieldAccess fa) {
+            return EscapedName(fa.Field);
+        }
+
+        private string EscapedName (JSField f) {
+            return EscapedName(f.Field);
+        }
+
+        private string EscapedName (FieldInfo fi) {
+            return WasmUtil.EscapeIdentifier(fi.Name);
+        }
+
         private void Assign (JSExpression target, JSExpression value) {
-            var leftVar = target as JSVariable;
-            if (leftVar == null) {
+            var leftVar   = target as JSVariable;
+            var leftField = target as JSFieldAccess;
+            var leftProp  = target as JSPropertyAccess;
+
+            if (leftVar != null) {
+                Formatter.WriteSExpr(
+                    "setlocal",
+                    (_) => {
+                        _.WriteRaw("${0} ", WasmUtil.EscapeIdentifier(leftVar.Name));
+                        Visit(value);
+                    },
+                    lineBreakAfter: true
+                );
+
+            } else if (leftField != null) {
+                Formatter.WriteSExpr(
+                    // what?????
+                    "store_global",
+                    (_) => {
+                        _.WriteRaw("${0} ", EscapedName(leftField));
+                        Visit(value);
+                    },
+                    lineBreakAfter: true
+                );
+
+            } else if (leftProp != null) {
+                var method = leftProp.OriginalMethod;
+                var memberName = WasmUtil.FormatMemberName(method.Reference.Resolve());
+
+                Formatter.WriteSExpr(
+                    "call", 
+                    (_) => {
+                        _.WriteRaw("${0} ", memberName);
+                        Visit(value);
+                    }, 
+                    lineBreakAfter: true
+                );
+
+            } else {
                 Console.WriteLine("Invalid assignment target {0}", target);
                 return;
             }
-
-            Formatter.WriteSExpr(
-                "setlocal",
-                (_) => {
-                    _.WriteRaw("${0} ", Util.EscapeIdentifier(leftVar.Name));
-                    Visit(value);
-                },
-                lineBreakAfter: true
-            );
         }
 
         public void VisitNode (JSVariable variable) {
             Formatter.WriteSExpr(
                 "getlocal",
                 (_) =>
-                    _.WriteRaw("${0}", Util.EscapeIdentifier(variable.Name))
+                    _.WriteRaw("${0}", WasmUtil.EscapeIdentifier(variable.Name))
             );
         }
 
@@ -610,6 +650,31 @@ namespace WasmSExprEmitter {
             Visit(aseq.Expected);
             Formatter.WriteRaw(" )");
             Formatter.NewLine();
+        }
+
+        public void VisitNode (JSFieldAccess fa) {
+            if (fa.IsWrite)
+                throw new Exception("Unhandled field write: " + fa);
+
+            Formatter.WriteSExpr(
+                // what?????
+                "load_global",
+                (_) => {
+                    _.WriteRaw("${0}", EscapedName(fa));
+                }
+            );                
+        }
+
+        public void VisitNode (JSPropertyAccess pa) {
+            if (pa.IsWrite)
+                throw new Exception("Unhandled property write: " + pa);
+
+            var method = pa.OriginalMethod;
+            var memberName = WasmUtil.FormatMemberName(method.Reference.Resolve());
+
+            Formatter.WriteSExpr("call", (_) => {
+                _.WriteRaw("${0}", memberName);
+            });
         }
 
         /*
