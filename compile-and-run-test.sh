@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 TESTNAME=$1
 shift

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 INFILE="third_party/tests/$1.cs"
 OUTFILE="output/$1.exe"
