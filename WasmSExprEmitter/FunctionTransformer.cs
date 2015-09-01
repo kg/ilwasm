@@ -98,7 +98,7 @@ namespace WasmSExprEmitter {
                     // HACK: Ignored for now
                     return new JSNullExpression();
 
-                case "System.Object Wasm.Test::Invoke(System.String,System.Object[])":
+                case "System.Void Wasm.Test::Invoke(System.String,System.Object[])":
                     var literalName = (JSStringLiteral)arguments[0];
                     var argumentValues = UnpackArgsArray(arguments[1]);
 

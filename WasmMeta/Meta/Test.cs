@@ -81,13 +81,20 @@ namespace Wasm {
         }
 
         [JSIsPure]
-        // FIXME: Strongly-typed?
-        public static object Invoke (string exportedFunctionName, params object[] values) {
+        public static void Invoke (string exportedFunctionName, params object[] values) {
             var assembly = Assembly.GetCallingAssembly();
             var exports = ExportTable.GetExports(assembly);
             var export = exports[exportedFunctionName];
+            var result = export.Invoke(null, values);
 
-            return export.Invoke(null, values);
+            Console.WriteLine(
+                "(invoke \"{1}\" {2}){0}" +
+                "-> {3}",
+                Environment.NewLine,
+                exportedFunctionName,
+                string.Join(" ", values),
+                result
+            );
         }
     }
 }
