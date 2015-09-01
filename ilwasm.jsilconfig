@@ -3,6 +3,9 @@
   "ProxyWarnings": false,
   "UseDefaultProxies": false,
   "UseLocalProxies": false,
+  "CodeGenerator": {
+    "StripUnusedLoopNames": "false"
+  },
   "Assemblies": {
     "Stubbed": [
       "^mscorlib,",

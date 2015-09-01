@@ -85,7 +85,6 @@ namespace Wasm {
             Console.WriteLine("// {0}", testName);
         }
 
-        [JSIsPure]
         public static void AssertEq (object expected, string exportedFunctionName, params object[] values) {
             var assembly = Assembly.GetCallingAssembly();
             var exports = ExportTable.GetExports(assembly);
@@ -121,7 +120,6 @@ namespace Wasm {
             Console.WriteLine(format, values);
         }
 
-        [JSIsPure]
         public static void Invoke (string exportedFunctionName, params object[] values) {
             var assembly = Assembly.GetCallingAssembly();
             var exports = ExportTable.GetExports(assembly);
