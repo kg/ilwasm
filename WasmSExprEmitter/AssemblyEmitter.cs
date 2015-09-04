@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 using Mono.Cecil;
 using JSIL;
 using JSIL.Ast;
@@ -10,11 +13,17 @@ using JSIL.Transforms;
 
 namespace WasmSExprEmitter {
     class WasmSExprAssemblyEmitter : IAssemblyEmitter {
-        private IAstEmitter EntryPointAstEmitter;
+        private struct StringTableEntry {
+            public byte[] Bytes;
+            public int    Offset;
+            public int    LengthBytes;
 
-        public readonly AssemblyTranslator Translator;
-        public readonly AssemblyDefinition Assembly;
-        public readonly JavascriptFormatter Formatter;
+            public StringTableEntry (int offset, string text) {
+                Offset = offset;
+                Bytes = Encoding.ASCII.GetBytes(text);
+                LengthBytes = Bytes.Length + 1;
+            }
+        }
 
         private enum PrecedingType {
             None,
@@ -25,12 +34,36 @@ namespace WasmSExprEmitter {
             TopLevel
         }
 
+        private IAstEmitter EntryPointAstEmitter;
+
+        public readonly AssemblyTranslator Translator;
+        public readonly AssemblyDefinition Assembly;
+        public readonly JavascriptFormatter Formatter;
+
+        private readonly Dictionary<string, StringTableEntry> StringTable = new Dictionary<string, StringTableEntry>();
+        private int      StringTableSize = 0;
+
         private PrecedingType Preceding;
 
         public WasmSExprAssemblyEmitter (AssemblyTranslator translator, AssemblyDefinition assembly, JavascriptFormatter formatter) {
             Translator = translator;
             Assembly = assembly;
             Formatter = formatter;
+        }
+
+        public int GetStringOffset (string str) {
+            // HACK
+            if (str == null)
+                str = "";
+
+            StringTableEntry result;
+            if (!StringTable.TryGetValue(str, out result)) {
+                result = new StringTableEntry(StringTableSize, str);
+                StringTableSize += result.LengthBytes;
+                StringTable.Add(str, result);
+            }
+
+            return result.Offset;
         }
 
         private void Switch (PrecedingType newType, bool neighborSpacing = false) {
@@ -71,15 +104,51 @@ namespace WasmSExprEmitter {
         }
 
         public void EmitFooter () {
-            if (Assembly.EntryPoint != null) {
-                int heapSize;
+            int heapSize = 0;
+            if (Assembly.EntryPoint != null)
+                WasmUtil.HeapSizes.TryGetValue(Assembly.EntryPoint.DeclaringType, out heapSize);
 
-                if (WasmUtil.HeapSizes.TryGetValue(Assembly.EntryPoint.DeclaringType, out heapSize)) {
-                    Switch(PrecedingType.Memory);
-            
-                    Formatter.WriteRaw("(memory {0} {0})", heapSize);
+            int totalMemorySize = heapSize + StringTableSize;
+
+            if (totalMemorySize > 0) {
+                Switch(PrecedingType.Memory);
+
+                if (StringTableSize > 0) {
+                    Formatter.WriteRaw("(func $__getString (param $offset i32) (result i32)");
+                    Formatter.NewLine();
+                    Formatter.Indent();
+                    Formatter.WriteRaw("(i32.add (i32.const {0}) (get_local $offset))", heapSize);
+                    Formatter.NewLine();
+                    Formatter.Unindent();
+                    Formatter.WriteRaw(")");
                     Formatter.NewLine();
                 }
+        
+                Formatter.WriteRaw("(memory {0} {0}", totalMemorySize);
+
+                if (StringTableSize > 0) {
+                    Formatter.Indent();
+                    Formatter.NewLine();
+
+                    Formatter.WriteRaw(";; string table");
+                    Formatter.NewLine();
+
+                    foreach (var kvp in StringTable.OrderBy(kvp => kvp.Value.Offset)) {
+                        Formatter.ConditionalNewLine();
+                        Formatter.WriteRaw(
+                            "(segment {0} \"{1}\")",
+                            kvp.Value.Offset + heapSize,
+                            // FIXME
+                            Encoding.ASCII.GetString(kvp.Value.Bytes)
+                        );
+                    }
+
+                    Formatter.Unindent();
+                    Formatter.ConditionalNewLine();
+                }
+
+                Formatter.WriteRaw(")");
+                Formatter.NewLine();
             }
 
             Formatter.Unindent();
@@ -100,7 +169,7 @@ namespace WasmSExprEmitter {
             var mainExpression = Translator.FunctionCache.GetExpression(entryPointIdentifier);
 
             var astEmitter = (AstEmitter)EntryPointAstEmitter;
-            var mainEmitter = new AstEmitter(Formatter, astEmitter.JSIL, astEmitter.TypeSystem, astEmitter.TypeInfo, astEmitter.Configuration, isTopLevel: true);
+            var mainEmitter = new AstEmitter(this, Formatter, astEmitter.JSIL, astEmitter.TypeSystem, astEmitter.TypeInfo, astEmitter.Configuration, isTopLevel: true);
 
             Switch(PrecedingType.TopLevel);
 
@@ -184,7 +253,7 @@ namespace WasmSExprEmitter {
         }
 
         public IAstEmitter MakeAstEmitter (JSILIdentifier jsil, TypeSystem typeSystem, TypeInfoProvider typeInfoProvider, Configuration configuration) {
-            return new AstEmitter(Formatter, jsil, typeSystem, typeInfoProvider, configuration, isTopLevel: false);
+            return new AstEmitter(this, Formatter, jsil, typeSystem, typeInfoProvider, configuration, isTopLevel: false);
         }
 
         public void EmitCachedValues (IAstEmitter astEmitter, TypeExpressionCacher typeCacher, SignatureCacher signatureCacher, BaseMethodCacher baseMethodCacher) {

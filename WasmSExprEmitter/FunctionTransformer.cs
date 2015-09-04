@@ -179,9 +179,16 @@ namespace WasmSExprEmitter {
 
                     return new SetMemory(typeSystem.Byte, false, actualAddress, arguments[arguments.Length - 1]);
                 }
+
+                case "System.Char System.String::get_Chars(System.Int32)": {
+                    var actualAddress = Add(typeSystem, thisExpression, arguments[0]);
+                    return new GetMemory(
+                        typeSystem.Byte, false, actualAddress
+                    );
+                }
             }
 
-            // Console.WriteLine("// Treating method '{0}' as runtime call", fullName);
+            Console.WriteLine("// Treating method '{0}' as runtime call", fullName);
             return null;
         }
     }

@@ -31,6 +31,7 @@ namespace WasmSExprEmitter {
         public readonly bool IsTopLevel;
 
         public readonly JSILIdentifier JSIL;
+        public readonly WasmSExprAssemblyEmitter AssemblyEmitter;
 
         private readonly Dictionary<string, LabelInfo> Labels = new Dictionary<string, LabelInfo>(StringComparer.InvariantCulture);
 
@@ -69,12 +70,13 @@ namespace WasmSExprEmitter {
         }
 
         public AstEmitter (
+            WasmSExprAssemblyEmitter assemblyEmitter, 
             JavascriptFormatter formatter, JSILIdentifier jsil, 
             TypeSystem typeSystem, TypeInfoProvider typeInfoProvider, 
             Configuration configuration, bool isTopLevel
-        ) 
-            : base() 
+        ) : base() 
         {
+            AssemblyEmitter = assemblyEmitter;
             Formatter = formatter;
             TypeSystem = typeSystem;
             TypeInfo = typeInfoProvider;
@@ -432,6 +434,11 @@ namespace WasmSExprEmitter {
                 Formatter.WriteSExpr("untranslatable.literal");
             }
 
+            if (literalType.FullName == "System.String") {
+                VisitStringLiteral((string)literal.Literal);
+                return;
+            }
+
             dynamic literalValue;
             if (literal is JSDefaultValueLiteral) {
                 literalValue = 0;
@@ -439,6 +446,8 @@ namespace WasmSExprEmitter {
                 literalValue = (dynamic)literal.Literal;
                 if (literalValue is bool)
                     literalValue = (literalValue ? 1 : 0);
+                else if (literalValue is char)
+                    literalValue = (int)literalValue;
             }
 
             Formatter.WriteSExpr(
@@ -446,6 +455,12 @@ namespace WasmSExprEmitter {
                 // HACK
                 (_) => Formatter.Value(literalValue)
             );
+        }
+
+        private void VisitStringLiteral (string s) {
+            var offset = AssemblyEmitter.GetStringOffset(s);
+
+            Formatter.WriteRaw("(call $__getString (i32.const {0}))", offset);
         }
 
         private string EscapedName (JSFieldAccess fa) {

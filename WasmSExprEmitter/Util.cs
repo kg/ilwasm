@@ -46,6 +46,13 @@ namespace WasmSExprEmitter {
                 case "System.SByte":
                 case "System.Int16":
                     return "i32";
+
+                case "System.Char":
+                    return "i32";
+
+                case "System.String":
+                    // HACK: String table offset
+                    return "i32";
             }
 
             return null;
@@ -60,6 +67,8 @@ namespace WasmSExprEmitter {
                 case "System.UInt16":
                 case "System.Int16":
                     return "i16";
+
+                // FIXME: i8 or i16 for char?
             }
 
             return PickTypeKeyword(type);

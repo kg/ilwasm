@@ -44,7 +44,7 @@ def translate(compiledPath):
   except OSError:
     pass
 
-  commandStr = ("third_party/JSIL/bin/JSILc.exe ./ilwasm.jsilconfig --quiet --nodefaults --e=WasmSExpr --outputFile=%s %s") % (
+  commandStr = ("third_party/JSIL/bin/JSILc.exe ./ilwasm.jsilconfig --quiet --nodefaults --nothreads --e=WasmSExpr --outputFile=%s %s") % (
     wasmPath, compiledPath
   )
   exitCode = subprocess.call(commandStr, shell=True)
