@@ -16,12 +16,12 @@ namespace WasmSExprEmitter {
         private struct StringTableEntry {
             public byte[] Bytes;
             public int    Offset;
-            public int    LengthBytes;
+            public int    SizeBytes;
 
             public StringTableEntry (int offset, string text) {
                 Offset = offset;
                 Bytes = Encoding.ASCII.GetBytes(text);
-                LengthBytes = Bytes.Length + 1;
+                SizeBytes = Bytes.Length + 8;
             }
         }
 
@@ -59,7 +59,7 @@ namespace WasmSExprEmitter {
             StringTableEntry result;
             if (!StringTable.TryGetValue(str, out result)) {
                 result = new StringTableEntry(StringTableSize, str);
-                StringTableSize += result.LengthBytes;
+                StringTableSize += result.SizeBytes;
                 StringTable.Add(str, result);
             }
 
@@ -107,11 +107,15 @@ namespace WasmSExprEmitter {
             Formatter.WriteRaw(";; Compiler-generated string table routines");
             Formatter.NewLine();
 
-            Formatter.WriteRaw("(func $__getString (param $offset i32) (result i32)");
+            Formatter.WriteRaw("(func $__getStringFirstChar (param $offset i32) (result i32)");
             Formatter.NewLine();
             Formatter.Indent();
 
-            Formatter.WriteRaw("(i32.add (i32.const {0}) (get_local $offset))", heapSize);
+            Formatter.WriteRaw(
+                "(i32.add (i32.const {0}) (get_local $offset))", 
+                // Add 4 to skip past the length header
+                heapSize + 4
+            );
             Formatter.NewLine();
 
             Formatter.Unindent();
@@ -119,20 +123,13 @@ namespace WasmSExprEmitter {
             Formatter.NewLine();
             Formatter.NewLine();
 
-            Formatter.WriteRaw("(func $__getStringLength (param $offset i32) (result i32)");
+            Formatter.WriteRaw("(func $__getStringLength (param $firstCharAddress i32) (result i32)");
             Formatter.NewLine();
             Formatter.Indent();
 
-            // FIXME: Switch statement or pull length out of memory segment
-            foreach (var e in StringTable.Values) {
-                Formatter.WriteRaw(
-                    "(if (i32.eq (i32.const {0}) (get_local $offset)) (return (i32.const {1})))",
-                    e.Offset, e.Bytes.Length
-                );
-                Formatter.NewLine();
-            }
-            // HACK
-            Formatter.WriteRaw("(return (i32.const 0))");
+            Formatter.WriteRaw(
+                "(return (i32.load/i32/1 (i32.sub (get_local $firstCharAddress) (i32.const 4))))"
+            );
             Formatter.NewLine();
 
             Formatter.Unindent();
@@ -155,7 +152,9 @@ namespace WasmSExprEmitter {
                     kvp.Value.Offset + heapSize
                 );
 
-
+                var lengthBytes = BitConverter.GetBytes(kvp.Value.Bytes.Length);
+                foreach (var b in lengthBytes)
+                    Formatter.WriteRaw("\\{0:X2}", b);
 
                 foreach (var b in kvp.Value.Bytes) {
                     if ((b < 32) || (b >= 127)) {

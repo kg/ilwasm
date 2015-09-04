@@ -572,7 +572,7 @@ namespace WasmSExprEmitter {
         private void VisitStringLiteral (string s) {
             var offset = AssemblyEmitter.GetStringOffset(s);
 
-            Formatter.WriteRaw("(call $__getString (i32.const {0}))", offset);
+            Formatter.WriteRaw("(call $__getStringFirstChar (i32.const {0}))", offset);
         }
 
         public void VisitNode (GetStringLength gsl) {
@@ -580,6 +580,7 @@ namespace WasmSExprEmitter {
                 "call",
                 (_) => {
                     _.WriteRaw("$__getStringLength ");
+                    // HACK: Assuming rhs is the result of getStringFirstChar
                     Visit(gsl.String);
                 }
             );
