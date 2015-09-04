@@ -131,8 +131,8 @@ namespace Wasm {
             return sb.ToString();
         }
 
-        private static bool TestHeapEq (int offset, int count, string expected) {
-            for (var i = 0; i < count; i++) {
+        private static bool TestHeapEq (int offset, string expected) {
+            for (var i = 0; i < expected.Length; i++) {
                 char ch = (char)Wasm.Heap.U8[offset, i];
                 if (ch != expected[i])
                     return false;
@@ -141,25 +141,23 @@ namespace Wasm {
             return true;
         }
 
-        public static void AssertHeapEq (int offset, int count, string expected) {
+        public static void AssertHeapEq (int offset, string expected) {
             var assembly = Assembly.GetCallingAssembly();
-            var passed = TestHeapEq(offset, count, expected);
+            var passed = TestHeapEq(offset, expected);
 
             if (QuietMode && passed)
                 return;
 
             PrintHeader(assembly);
             Console.WriteLine(
-                "(assert_heap_eq {1} {2} \"{3}\"){0}" +
-                "-> {3} \"{4}\" == \"{5}\"",
+                "(assert_heap_eq {1} \"{2}\"){0}" +
+                "-> {3} \"{2}\" == \"{4}\"",
                 Environment.NewLine,
-                offset, count,
-                expected,
+                offset, expected,
                 passed
                     ? "pass"
                     : "fail",
-                expected,
-                FormatHeapRange(offset, count)
+                FormatHeapRange(offset, expected.Length)
             );
         }
 

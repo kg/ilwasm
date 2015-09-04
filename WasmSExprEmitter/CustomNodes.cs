@@ -207,16 +207,15 @@ namespace WasmSExprEmitter {
     }
 
     public class AssertHeapEq : SExpression {
-        public readonly int Offset, Count;
+        public readonly int Offset;
         public readonly string Expected;
 
-        public AssertHeapEq (int offset, int count, string expected)
+        public AssertHeapEq (int offset, string expected)
             : base (
                 "assert_heap_eq"
             ) {
 
             Offset = offset;
-            Count = count;
             Expected = expected;
         }
 

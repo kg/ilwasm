@@ -26,6 +26,6 @@ public static class Program {
 
         Invoke("buildString");
 
-        AssertHeapEq(0, 14, "hello, world!\0");
+        AssertHeapEq(0, "hello, world!\0");
     }
 }

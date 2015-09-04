@@ -809,7 +809,7 @@ namespace WasmSExprEmitter {
         }
 
         public void VisitNode (AssertHeapEq asheq) {
-            Formatter.WriteRaw("(assert_heap_eq {0} {1} \"", asheq.Offset, asheq.Count);
+            Formatter.WriteRaw("(assert_heap_eq {0} \"", asheq.Offset);
             WasmSExprAssemblyEmitter.EmitStringLiteralContents(
                 Formatter.Output, System.Text.Encoding.ASCII.GetBytes(asheq.Expected)
             );

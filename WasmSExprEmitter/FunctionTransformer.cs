@@ -117,16 +117,14 @@ namespace WasmSExprEmitter {
                     return new AssertEq(expected, methodName, invokeArguments);
                 }
 
-                case "System.Void Wasm.Test::AssertHeapEq(System.Int32,System.Int32,System.String)": {
-                    int offset, count;
+                case "System.Void Wasm.Test::AssertHeapEq(System.Int32,System.String)": {
+                    int offset;
                     if (ExtractLiteral(arguments[0], out offset))
                         throw new Exception("Expected offset as arg0 of assertheapeq");
-                    if (ExtractLiteral(arguments[1], out count))
-                        throw new Exception("Expected count as arg1 of assertheapeq");
                     string expected;
-                    if (!ExtractLiteral(arguments[2], out expected))
+                    if (!ExtractLiteral(arguments[1], out expected))
                         throw new Exception("Expected expected as arg2 of assertheapeq");
-                    return new AssertHeapEq(offset, count, expected);
+                    return new AssertHeapEq(offset, expected);
                 }
 
                 case "System.Void Wasm.Heap::SetHeapSize(System.Int32)": {
@@ -206,7 +204,7 @@ namespace WasmSExprEmitter {
                 }
             }
 
-            Console.WriteLine("// Treating method '{0}' as runtime call", fullName);
+            // Console.WriteLine("// Treating method '{0}' as runtime call", fullName);
             return null;
         }
     }
