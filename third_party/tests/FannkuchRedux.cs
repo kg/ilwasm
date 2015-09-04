@@ -62,17 +62,6 @@ public static class Program {
         }
     }
 
-    private static void permuteInnerStep (int i) {
-        I32[_S, i] = i;
-
-        // Rotate 0<-...<-i+1.
-        var t = I32[_P, 0]; 
-        for (int j = 0; j <= i; j++) { 
-            I32[_P, j] = I32[_P, j + 1]; 
-        } 
-        I32[_P, i + 1] = t;
-    }
-
     private static bool permuteNegativeSign (int n) {
         int m = n - 1;
         var t = I32[_P, 1]; 
@@ -89,7 +78,14 @@ public static class Program {
             if (i == m)
                 return true;
 
-            permuteInnerStep(i);
+            I32[_S, i] = i;
+
+            // Rotate 0<-...<-i+1.
+            t = I32[_P, 0]; 
+            for (int j = 0; j <= i; j++) { 
+                I32[_P, j] = I32[_P, j + 1]; 
+            } 
+            I32[_P, i + 1] = t;
         }
 
         return false;

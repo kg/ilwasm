@@ -127,8 +127,13 @@ namespace WasmSExprEmitter {
             }
 
             Formatter.WriteSExpr(
-                blockName ?? "block", (_) =>
-                    EmitArgumentList(_, body, true),
+                blockName ?? "block", 
+                (_) => {
+                    if (body.Count == 0)
+                        _.WriteRaw("(nop)");
+                    else
+                        EmitArgumentList(_, body, true);
+                },
                 lineBreakInside: true,
                 lineBreakAfter: true
             );
@@ -837,7 +842,7 @@ namespace WasmSExprEmitter {
                 Visit(se);
                 Formatter.ConditionalNewLine();
             }
-                
+
             Formatter.Unindent();
             Formatter.WriteRaw(")");
         }
