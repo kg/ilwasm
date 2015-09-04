@@ -138,6 +138,16 @@ namespace WasmSExprEmitter {
             Formatter.NewLine();
         }
 
+        public static void EmitStringLiteralContents (System.IO.TextWriter tw, byte[] text) {
+            foreach (var b in text) {
+                if ((b < 32) || (b >= 127)) {
+                    tw.Write("\\{0:X2}", b);
+                } else {
+                    tw.Write((char)b);
+                }
+            }
+        }
+
         private void EmitStringTable (int heapSize) {
             Formatter.Indent();
             Formatter.NewLine();
@@ -156,13 +166,7 @@ namespace WasmSExprEmitter {
                 foreach (var b in lengthBytes)
                     Formatter.WriteRaw("\\{0:X2}", b);
 
-                foreach (var b in kvp.Value.Bytes) {
-                    if ((b < 32) || (b >= 127)) {
-                        Formatter.WriteRaw("\\{0:X2}", b);
-                    } else {
-                        Formatter.Output.Write((char)b);
-                    }
-                }
+                EmitStringLiteralContents(Formatter.Output, kvp.Value.Bytes);
 
                 Formatter.WriteRaw("\")");
             }

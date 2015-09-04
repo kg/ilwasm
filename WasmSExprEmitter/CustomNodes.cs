@@ -206,6 +206,25 @@ namespace WasmSExprEmitter {
         }
     }
 
+    public class AssertHeapEq : SExpression {
+        public readonly int Offset, Count;
+        public readonly string Expected;
+
+        public AssertHeapEq (int offset, int count, string expected)
+            : base (
+                "assert_heap_eq"
+            ) {
+
+            Offset = offset;
+            Count = count;
+            Expected = expected;
+        }
+
+        public override TypeReference GetActualType (TypeSystem typeSystem) {
+            return typeSystem.Void;
+        }
+    }
+
     public class GetStringLength : JSExpression {
         public GetStringLength (JSExpression str)
             : base(str) {

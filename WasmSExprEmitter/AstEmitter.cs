@@ -808,6 +808,15 @@ namespace WasmSExprEmitter {
             Formatter.NewLine();
         }
 
+        public void VisitNode (AssertHeapEq asheq) {
+            Formatter.WriteRaw("(assert_heap_eq {0} {1} \"", asheq.Offset, asheq.Count);
+            WasmSExprAssemblyEmitter.EmitStringLiteralContents(
+                Formatter.Output, System.Text.Encoding.ASCII.GetBytes(asheq.Expected)
+            );
+            Formatter.WriteRaw("\")");
+            Formatter.NewLine();
+        }
+
         public void VisitNode (JSFieldAccess fa) {
             if (fa.IsWrite)
                 throw new Exception("Unhandled field write: " + fa);

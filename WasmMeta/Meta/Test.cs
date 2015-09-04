@@ -115,9 +115,52 @@ namespace Wasm {
             );
         }
 
-        [JSIsPure]
-        public static void Printf (string format, params object[] values) {
-            Console.WriteLine(format, values);
+        private static string FormatHeapRange (int offset, int count) {
+            var sb = new StringBuilder();
+
+            for (var i = 0; i < count; i++) {
+                char ch = (char)Wasm.Heap.U8[offset, i];
+
+                if ((ch < 32) || (ch >= 127)) {
+                    sb.AppendFormat("\\x{0:X2}", (int)ch);
+                } else {
+                    sb.Append(ch);
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        private static bool TestHeapEq (int offset, int count, string expected) {
+            for (var i = 0; i < count; i++) {
+                char ch = (char)Wasm.Heap.U8[offset, i];
+                if (ch != expected[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static void AssertHeapEq (int offset, int count, string expected) {
+            var assembly = Assembly.GetCallingAssembly();
+            var passed = TestHeapEq(offset, count, expected);
+
+            if (QuietMode && passed)
+                return;
+
+            PrintHeader(assembly);
+            Console.WriteLine(
+                "(assert_heap_eq {1} {2} \"{3}\"){0}" +
+                "-> {3} \"{4}\" == \"{5}\"",
+                Environment.NewLine,
+                offset, count,
+                expected,
+                passed
+                    ? "pass"
+                    : "fail",
+                expected,
+                FormatHeapRange(offset, count)
+            );
         }
 
         public static void Invoke (string exportedFunctionName, params object[] values) {
