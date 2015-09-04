@@ -186,6 +186,10 @@ namespace WasmSExprEmitter {
                         typeSystem.Byte, false, actualAddress
                     );
                 }
+
+                case "System.Int32 System.String::get_Length()": {
+                    return new GetStringLength(thisExpression);
+                }
             }
 
             Console.WriteLine("// Treating method '{0}' as runtime call", fullName);

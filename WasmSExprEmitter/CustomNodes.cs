@@ -206,4 +206,20 @@ namespace WasmSExprEmitter {
             return typeSystem.Void;
         }
     }
+
+    public class GetStringLength : JSExpression {
+        public GetStringLength (JSExpression str)
+            : base(str) {
+        }
+
+        public JSExpression String {
+            get {
+                return Values[0];
+            }
+        }
+
+        public override TypeReference GetActualType (TypeSystem typeSystem) {
+            return typeSystem.Int32;
+        }
+    }
 }

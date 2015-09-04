@@ -114,13 +114,40 @@ namespace WasmSExprEmitter {
                 Switch(PrecedingType.Memory);
 
                 if (StringTableSize > 0) {
+                    Formatter.WriteRaw(";; Compiler-generated string table routines");
+                    Formatter.NewLine();
+
                     Formatter.WriteRaw("(func $__getString (param $offset i32) (result i32)");
                     Formatter.NewLine();
                     Formatter.Indent();
+
                     Formatter.WriteRaw("(i32.add (i32.const {0}) (get_local $offset))", heapSize);
                     Formatter.NewLine();
+
                     Formatter.Unindent();
                     Formatter.WriteRaw(")");
+                    Formatter.NewLine();
+                    Formatter.NewLine();
+
+                    Formatter.WriteRaw("(func $__getStringLength (param $offset i32) (result i32)");
+                    Formatter.NewLine();
+                    Formatter.Indent();
+
+                    // FIXME: Switch statement or pull length out of memory segment
+                    foreach (var e in StringTable.Values) {
+                        Formatter.WriteRaw(
+                            "(if (i32.eq (i32.const {0}) (get_local $offset)) (return (i32.const {1})))",
+                            e.Offset, e.Bytes.Length
+                        );
+                        Formatter.NewLine();
+                    }
+                    // HACK
+                    Formatter.WriteRaw("(return (i32.const 0))");
+                    Formatter.NewLine();
+
+                    Formatter.Unindent();
+                    Formatter.WriteRaw(")");
+                    Formatter.NewLine();
                     Formatter.NewLine();
                 }
         

@@ -10,20 +10,17 @@ public static class Program {
             case 1:
                 return "hello";
             case 2:
-                return "world";
+                return "world!";
             default:
                 return null;
         }
     }
 
-    // FIXME: How do you encode raw bytes into wasm memory segments? :/
-    /*
     [Export]
     public static int getStringLength (int stringIndex) {
         var str = getAString(stringIndex);
         return str.Length;
     }
-    */
 
     [Export]
     public static char readStringChar (int stringIndex, int offset) {
@@ -32,11 +29,14 @@ public static class Program {
     }
 
     public static void Main () {
-        SetHeapSize(256);
+        AssertEq(5,    "getStringLength", 1);
+        AssertEq(6,    "getStringLength", 2);
 
-        AssertEq('h', "readStringChar", 1, 0);
-        AssertEq('l', "readStringChar", 1, 2);
-        AssertEq('w', "readStringChar", 2, 0);
-        AssertEq('l', "readStringChar", 2, 3);
+        AssertEq('h',  "readStringChar",  1, 0);
+        AssertEq('l',  "readStringChar",  1, 2);
+
+        AssertEq('w',  "readStringChar",  2, 0);
+        AssertEq('l',  "readStringChar",  2, 3);
+        AssertEq('!',  "readStringChar",  2, 5);
     }
 }

@@ -435,7 +435,12 @@ namespace WasmSExprEmitter {
             }
 
             if (literalType.FullName == "System.String") {
-                VisitStringLiteral((string)literal.Literal);
+                if (literal is JSDefaultValueLiteral) {
+                    VisitStringLiteral(null);
+                } else {
+                    var literalStr = (string)literal.Literal;
+                    VisitStringLiteral(literalStr);
+                }
                 return;
             }
 
@@ -447,7 +452,7 @@ namespace WasmSExprEmitter {
                 if (literalValue is bool)
                     literalValue = (literalValue ? 1 : 0);
                 else if (literalValue is char)
-                    literalValue = (int)literalValue;
+                    literalValue = (int)(char)literalValue;
             }
 
             Formatter.WriteSExpr(
@@ -461,6 +466,16 @@ namespace WasmSExprEmitter {
             var offset = AssemblyEmitter.GetStringOffset(s);
 
             Formatter.WriteRaw("(call $__getString (i32.const {0}))", offset);
+        }
+
+        public void VisitNode (GetStringLength gsl) {
+            Formatter.WriteSExpr(
+                "call",
+                (_) => {
+                    _.WriteRaw("$__getStringLength ");
+                    Visit(gsl.String);
+                }
+            );
         }
 
         private string EscapedName (JSFieldAccess fa) {
