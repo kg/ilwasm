@@ -279,7 +279,13 @@ namespace WasmSExprEmitter {
         }
 
         public void VisitNode (JSExpressionStatement es) {
-            base.VisitNode(es);
+            try {
+                VisitChildren(es);
+            } catch (Exception exc) {
+                Console.WriteLine("// Error in statement");
+                Console.WriteLine("// {0}", es);
+                throw;
+            }
         }
 
         public void VisitNode (JSVariableDeclarationStatement vds) {
@@ -615,7 +621,6 @@ namespace WasmSExprEmitter {
 
             } else if (leftField != null) {
                 Formatter.WriteSExpr(
-                    // what?????
                     "store_global",
                     (_) => {
                         _.WriteRaw("${0} ", EscapedName(leftField));
@@ -803,7 +808,6 @@ namespace WasmSExprEmitter {
                 throw new Exception("Unhandled field write: " + fa);
 
             Formatter.WriteSExpr(
-                // what?????
                 "load_global",
                 (_) => {
                     _.WriteRaw("${0}", EscapedName(fa));

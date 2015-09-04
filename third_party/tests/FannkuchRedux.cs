@@ -19,6 +19,8 @@ public static class Program {
     const int _Q = 32 * 2;
     const int _S = 32 * 3;
 
+    static int maxflips, sum;
+
     private static void initHeap (int n) {
         for (int i = 0; i < n; i++) {
             I32[_P, i] = i;
@@ -29,7 +31,9 @@ public static class Program {
 
     [Export]
     public static void fannkuch (int n) {
-        int sign = 1, maxflips = 0, sum = 0, m = n - 1;
+        int sign = 1, m = n - 1;
+        maxflips = 0;
+        sum = 0;
 
         initHeap(n);
 
