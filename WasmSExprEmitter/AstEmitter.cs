@@ -572,8 +572,12 @@ namespace WasmSExprEmitter {
                 typeToken = WasmUtil.PickTypeKeyword(leftType);
 
             var signSuffix = "";
-            if (leftSign.HasValue && TypeUtil.IsIntegral(leftType)) {
-                signSuffix = leftSign.Value
+            if (
+                (leftSign.HasValue && TypeUtil.IsIntegral(leftType)) ||
+                // HACK
+                (leftType.FullName == "System.Char")
+            ) {
+                signSuffix = leftSign.GetValueOrDefault(true)
                     ? "_s"
                     : "_u";
             }

@@ -39,8 +39,10 @@ namespace WasmSExprEmitter {
 
             // The default proxies contain JS-specific replacements/hacks that aren't necessarily correct for wasm
             result.UseDefaultProxies = false;
-
             result.IncludeDependencies = false;
+
+            result.CodeGenerator.IntroduceCharCasts = false;
+            result.CodeGenerator.IntroduceEnumCasts = false;
 
             return result;
         }

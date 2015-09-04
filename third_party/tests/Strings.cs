@@ -16,6 +16,39 @@ public static class Program {
         }
     }
 
+    public static int strcmp (string lhs, string rhs) {
+        if (lhs == null) {
+            if (rhs == null)
+                return 0;
+            else
+                return -1;
+        } else if (rhs == null) {
+            return 1;
+        }
+
+        var length = lhs.Length;
+        if (rhs.Length < length)
+            length = rhs.Length;
+
+        for (var i = 0; i < length; i++) {
+            var chL = lhs[i];
+            var chR = rhs[i];
+
+            if (chL < chR)
+                return -1;
+            else if (chL > chR)
+                return 1;
+        }
+
+        // FIXME: Length difference
+        return 0;
+    }
+
+    [Export]
+    public static int compareStrings (int lhsIndex, int rhsIndex) {
+        return strcmp(getAString(lhsIndex), getAString(rhsIndex));
+    }
+
     [Export]
     public static int getStringLength (int stringIndex) {
         var str = getAString(stringIndex);
@@ -38,5 +71,12 @@ public static class Program {
         AssertEq('w',  "readStringChar",  2, 0);
         AssertEq('l',  "readStringChar",  2, 3);
         AssertEq('!',  "readStringChar",  2, 5);
+
+        AssertEq(0,    "compareStrings",  0, 0);
+        AssertEq(-1,   "compareStrings",  0, 1);
+        AssertEq(1,    "compareStrings",  2, 0);
+        AssertEq(0,    "compareStrings",  1, 1);
+        AssertEq(-1,   "compareStrings",  1, 2);
+        AssertEq(1,    "compareStrings",  2, 1);
     }
 }
