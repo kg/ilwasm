@@ -827,9 +827,19 @@ namespace WasmSExprEmitter {
             });
         }
 
-        /*
-        public void VisitNode (JSInvocationExpression ie) {
+        public void VisitNode (JSCommaExpression ce) {
+            Formatter.ConditionalNewLine();
+            Formatter.WriteRaw("(block ");
+            Formatter.NewLine();
+            Formatter.Indent();
+
+            foreach (var se in ce.SubExpressions) {
+                Visit(se);
+                Formatter.ConditionalNewLine();
+            }
+                
+            Formatter.Unindent();
+            Formatter.WriteRaw(")");
         }
-        */
     }
 }

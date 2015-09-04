@@ -29,9 +29,85 @@ public static class Program {
         }
     }
 
+    private static void process0thElement (int n, int sign, int q0) {
+        if (q0 != 0) {
+            for (int i = 1; i < n; i++) 
+                I32[_Q, i] = I32[_P, i]; // Work on a copy.
+
+            var flips = 1;
+            do {
+                var qq = I32[_Q, q0];
+                if (qq == 0) { // ... until 0th element is 0.
+                    sum += sign * flips;
+                    if (flips > maxflips) 
+                        maxflips = flips; // New maximum?
+                    break;
+                }
+
+                I32[_Q, q0] = q0;
+                if (q0 >= 3) {
+                    int i = 1, j = q0 - 1, t;
+
+                    do { 
+                        t = I32[_Q, i]; 
+                        I32[_Q, i] = I32[_Q, j]; 
+                        I32[_Q, j] = t; 
+                        i++; 
+                        j--; 
+                    } while (i < j);
+                }
+
+                q0 = qq; flips++;
+            } while (true);
+        }
+    }
+
+    private static void permuteInnerStep (int i) {
+        I32[_S, i] = i;
+
+        // Rotate 0<-...<-i+1.
+        var t = I32[_P, 0]; 
+        for (int j = 0; j <= i; j++) { 
+            I32[_P, j] = I32[_P, j + 1]; 
+        } 
+        I32[_P, i + 1] = t;
+    }
+
+    private static bool permuteNegativeSign (int n) {
+        int m = n - 1;
+        var t = I32[_P, 1]; 
+        I32[_P, 1] = I32[_P, 2]; 
+        I32[_P, 2] = t; 
+
+        for (int i = 2; i < n; i++) {
+            var sx = I32[_S, i];
+            if (sx != 0) { 
+                I32[_S, i] = sx - 1; 
+                break; 
+            }
+            
+            if (i == m)
+                return true;
+
+            permuteInnerStep(i);
+        }
+
+        return false;
+    }
+
+    [Export]
+    public static int get_Sum () {
+        return sum;
+    }
+
+    [Export]
+    public static int get_MaxFlips () {
+        return maxflips;
+    }
+
     [Export]
     public static void fannkuch (int n) {
-        int sign = 1, m = n - 1;
+        int sign = 1;
         maxflips = 0;
         sum = 0;
 
@@ -39,38 +115,7 @@ public static class Program {
 
         do {
             // Copy and flip.            
-
-            var q0 = I32[_P, 0]; // Cache 0th element.
-            if (q0 != 0) {
-                for (int i = 1; i < n; i++) 
-                    I32[_Q, i] = I32[_P, i]; // Work on a copy.
-
-                var flips = 1;
-                do {
-                    var qq = I32[_Q, q0];
-                    if (qq == 0) { // ... until 0th element is 0.
-                        sum += sign * flips;
-                        if (flips > maxflips) 
-                            maxflips = flips; // New maximum?
-                        break;
-                    }
-
-                    I32[_Q, q0] = q0;
-                    if (q0 >= 3) {
-                        int i = 1, j = q0 - 1, t;
-
-                        do { 
-                            t = I32[_Q, i]; 
-                            I32[_Q, i] = I32[_Q, j]; 
-                            I32[_Q, j] = t; 
-                            i++; 
-                            j--; 
-                        } while (i < j);
-                    }
-
-                    q0 = qq; flips++;
-                } while (true);
-            }
+            process0thElement(n, sign, I32[_P, 0]);
 
             // Permute.
             if (sign == 1) {
@@ -79,39 +124,11 @@ public static class Program {
                 I32[_P, 0] = t; 
                 sign = -1; // Rotate 0<-1.
             } else {
-                var t = I32[_P, 1]; 
-                I32[_P, 1] = I32[_P, 2]; 
-                I32[_P, 2] = t; 
                 sign = 1; // Rotate 0<-1 and 0<-1<-2.
-
-                for (int i = 2; i < n; i++) {
-                    var sx = I32[_S, i];
-                    if (sx != 0) { 
-                        I32[_S, i] = sx - 1; 
-                        break; 
-                    }
-                    
-                    if (i == m)  {
-                        I32[_Result, 0] = sum;
-                        I32[_Result, 1] = maxflips;
-                        return;
-                    }
-                    I32[_S, i] = i;
-
-                    // Rotate 0<-...<-i+1.
-                    t = I32[_P, 0]; 
-                    for (int j = 0; j <= i; j++) { 
-                        I32[_P, j] = I32[_P, j + 1]; 
-                    } 
-                    I32[_P, i + 1] = t;
-                }
+                if (permuteNegativeSign(n))
+                    return;
             }
         } while (true);
-    }
-
-    [Export]
-    public static int readI32 (int @base, int offset) {
-        return I32[@base, offset];
     }
 
     public static void Main () {
@@ -120,7 +137,7 @@ public static class Program {
         int n = 7;
         Invoke("fannkuch", n);
 
-        AssertEq(228, "readI32", _Result, 0);
-        AssertEq(16,  "readI32", _Result, 1);
+        AssertEq(228, "get_Sum");
+        AssertEq(16,  "get_MaxFlips");
     }
 }

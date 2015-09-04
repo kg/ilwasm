@@ -111,7 +111,7 @@ namespace WasmSExprEmitter {
 
         public override bool IsConstant {
             get {
-                return Values[0].IsConstant;
+                return false;
             }
         }
     }
@@ -153,7 +153,6 @@ namespace WasmSExprEmitter {
 
         public override bool IsConstant {
             get {
-                // FIXME?
                 return false;
             }
         }
