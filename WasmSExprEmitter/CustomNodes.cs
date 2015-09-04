@@ -86,15 +86,12 @@ namespace WasmSExprEmitter {
             JSExpression addressInBytes
         ) : base (
             string.Format(
-                "load{0}{1}.{2}", 
-                TypeUtil.IsSigned(type).GetValueOrDefault()
-                    ? "s"
-                    : "u",
+                "{0}.load/{1}{2}",
+                WasmUtil.PickTypeKeyword(type),
+                WasmUtil.PickMemoryTypeKeyword(type),
                 isAligned
                     ? ""
-                    // WTF???
-                    : ".1",
-                WasmUtil.PickMemoryTypeKeyword(type)
+                    : "/1"
             ),
             addressInBytes
         ) {
@@ -128,15 +125,12 @@ namespace WasmSExprEmitter {
             JSExpression addressInBytes, JSExpression value
         ) : base (
             string.Format(
-                "store{0}{1}.{2}", 
-                TypeUtil.IsSigned(type).GetValueOrDefault()
-                    ? "s"
-                    : "u",
+                "{0}.store/{1}{2}",
+                WasmUtil.PickTypeKeyword(type),
+                WasmUtil.PickMemoryTypeKeyword(type),
                 isAligned
                     ? ""
-                    // WTF???
-                    : ".1",
-                WasmUtil.PickMemoryTypeKeyword(type)
+                    : "/1"
             ),
             addressInBytes, value
         ) {
@@ -189,7 +183,7 @@ namespace WasmSExprEmitter {
 
         public AssertEq (JSExpression expected, string exportedFunctionName, JSExpression[] arguments)
             : base (
-                "asserteq", 
+                "assert_eq", 
                 (new[] { expected }).Concat(arguments).ToArray()
             ) {
 

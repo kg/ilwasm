@@ -305,7 +305,7 @@ namespace WasmSExprEmitter {
                 ));
 
             Formatter.ConditionalNewLine();
-            Formatter.WriteRaw("(setlocal $currentLabel_{0} (const.i32 {1}))", labelInfo.GroupIndex, labelInfo.LabelIndex);
+            Formatter.WriteRaw("(set_local $currentLabel_{0} (i32.const {1}))", labelInfo.GroupIndex, labelInfo.LabelIndex);
             Formatter.NewLine();
         }
 
@@ -341,7 +341,7 @@ namespace WasmSExprEmitter {
                                 _.ConditionalNewLine();
                                 Comment("Begin Label {1}", lgs.GroupIndex, kvp.Key);
 
-                                _.WriteRaw("(if (eq.i32 (getlocal $currentLabel_{0}) (const.i32 {1})) ", labelInfo.GroupIndex, labelInfo.LabelIndex);
+                                _.WriteRaw("(if (i32.eq (get_local $currentLabel_{0}) (i32.const {1})) ", labelInfo.GroupIndex, labelInfo.LabelIndex);
                                 _.Indent();
                                 _.NewLine();
 
@@ -412,7 +412,7 @@ namespace WasmSExprEmitter {
 
             Formatter.ConditionalNewLine();
             Comment("goto {0}", ge.TargetLabel);
-            Formatter.WriteRaw("(block (setlocal $currentLabel_{0} (const.i32 {1})) (break $labelgroup_{0}_dispatch) )", labelInfo.GroupIndex, labelInfo.LabelIndex);
+            Formatter.WriteRaw("(block (set_local $currentLabel_{0} (i32.const {1})) (break $labelgroup_{0}_dispatch) )", labelInfo.GroupIndex, labelInfo.LabelIndex);
             Formatter.NewLine();
         }
 
@@ -442,7 +442,7 @@ namespace WasmSExprEmitter {
             }
 
             Formatter.WriteSExpr(
-                "const." + typeToken,
+                typeToken + ".const",
                 // HACK
                 (_) => Formatter.Value(literalValue)
             );
@@ -467,7 +467,7 @@ namespace WasmSExprEmitter {
 
             if (leftVar != null) {
                 Formatter.WriteSExpr(
-                    "setlocal",
+                    "set_local",
                     (_) => {
                         _.WriteRaw("${0} ", WasmUtil.EscapeIdentifier(leftVar.Name));
                         Visit(value);
@@ -507,7 +507,7 @@ namespace WasmSExprEmitter {
 
         public void VisitNode (JSVariable variable) {
             Formatter.WriteSExpr(
-                "getlocal",
+                "get_local",
                 (_) =>
                     _.WriteRaw("${0}", WasmUtil.EscapeIdentifier(variable.Name))
             );
@@ -544,12 +544,12 @@ namespace WasmSExprEmitter {
             var signSuffix = "";
             if (leftSign.HasValue && TypeUtil.IsIntegral(leftType)) {
                 signSuffix = leftSign.Value
-                    ? "s"
-                    : "u";
+                    ? "_s"
+                    : "_u";
             }
 
             var actualKeyword = string.Format(
-                keyword + "." + typeToken,
+                typeToken + "." + keyword,
                 signSuffix
             );
 
@@ -635,14 +635,18 @@ namespace WasmSExprEmitter {
             var originalTypeToken = WasmUtil.PickTypeKeyword(originalType);
 
             Formatter.WriteSExpr(
-                "converts." + originalTypeToken + "." + typeToken, (_) => {
+                string.Format(
+                    "{0}.convert_s/{1}",
+                    typeToken,
+                    originalTypeToken
+                ), (_) => {
                     Visit(itfe.Expression);
                 }
             );
         }
 
         public void VisitNode (AssertEq aseq) {
-            Formatter.WriteRaw("(asserteq (invoke ");
+            Formatter.WriteRaw("(assert_eq (invoke ");
             Formatter.Value(aseq.ExportedFunctionName);
             Formatter.Space();
             EmitArgumentList(Formatter, aseq.Arguments, false);

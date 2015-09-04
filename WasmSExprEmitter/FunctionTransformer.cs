@@ -88,7 +88,7 @@ namespace WasmSExprEmitter {
             switch (fullName) {
                 case "System.Double System.Math::Sqrt(System.Double)":
                     return new AbstractSExpression(
-                        "sqrt.f64",
+                        "f64.sqrt",
                         typeSystem.Double,
                         arguments,
                         isConstantIfArgumentsAre: true
