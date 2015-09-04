@@ -11,6 +11,8 @@ public static class Program {
                 return "hello";
             case 2:
                 return "world!";
+            case 3:
+                return "\0\r\n\x07";
             default:
                 return null;
         }
@@ -78,5 +80,10 @@ public static class Program {
         AssertEq(0,    "compareStrings",  1, 1);
         AssertEq(-1,   "compareStrings",  1, 2);
         AssertEq(1,    "compareStrings",  2, 1);
+
+        AssertEq('\0',   "readStringChar",  3, 0);
+        AssertEq('\r',   "readStringChar",  3, 1);
+        AssertEq('\n',   "readStringChar",  3, 2);
+        AssertEq('\x07', "readStringChar",  3, 3);
     }
 }

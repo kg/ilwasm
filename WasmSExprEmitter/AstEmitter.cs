@@ -211,7 +211,7 @@ namespace WasmSExprEmitter {
                             if (fl.Increment != null) {
                                 _.ConditionalNewLine();
                                 _.NewLine();
-                                Comment("for (...; ...; <!>)");
+                                Comment("for (...; ...; {0})", fl.Increment);
                                 Visit(fl.Increment);
                             }
                         },
@@ -311,6 +311,115 @@ namespace WasmSExprEmitter {
             Formatter.NewLine();
         }
 
+        private void EmitCaseValue (JSExpression v) {
+            var l = v as JSLiteral;
+            var val = Convert.ToInt64(l.Literal);
+            Formatter.Value(val);
+        }
+
+        private void EmitSwitchCase (JSSwitchCase sc) {
+            Formatter.ConditionalNewLine();
+
+            if (sc.IsDefault) {
+                Formatter.WriteRaw("(;default;) ");
+                Visit(sc.Body);
+            } else if (sc.Values == null) {
+                throw new Exception("Non-default case with no values");
+            } else {
+                for (var i = 0; i < sc.Values.Length - 1; i++) {
+                    var v = sc.Values[i];
+                    Formatter.WriteSExpr(
+                        "case", 
+                        (_) =>
+                            EmitCaseValue(v),
+                        lineBreakAfter: true
+                    );
+                }
+
+                var lastValue = sc.Values.Last();
+                Formatter.WriteSExpr(
+                    "case",
+                    (_) => {
+                        EmitCaseValue(lastValue);
+                        Formatter.NewLine();
+                        Formatter.Indent();
+                        Visit(sc.Body);
+                        Formatter.ConditionalNewLine();
+                        Formatter.Unindent();
+                    },
+                    lineBreakAfter: true
+                );
+            }
+        }
+
+        public void VisitNode (JSSwitchStatement ss) {
+            Formatter.ConditionalNewLine();
+
+            Comment("switch ({0}) {{", ss.Condition);
+            Formatter.WriteRaw("(i32.switch ");
+            Formatter.Indent();
+            Visit(ss.Condition);
+            Formatter.ConditionalNewLine();
+
+            var defaultCase = ss.Cases.FirstOrDefault(c => c.IsDefault);
+
+            foreach (var c in ss.Cases) {
+                if (c.IsDefault)
+                    continue;
+
+                EmitSwitchCase(c);
+            }
+
+            if (defaultCase != null)
+                EmitSwitchCase(defaultCase);
+
+            Formatter.Unindent();
+            Formatter.ConditionalNewLine();
+            Formatter.WriteRaw(")");
+            Formatter.NewLine();
+        }
+
+        /*
+        public void VisitNode (JSSwitchStatement swtch) {
+            BlockStack.Push(BlockType.Switch);
+            WriteLabel(swtch);
+
+            Output.WriteRaw("switch");
+            Output.Space();
+
+            Output.LPar();
+            Visit(swtch.Condition);
+            Output.RPar();
+            Output.Space();
+
+            Output.OpenBrace();
+
+            foreach (var c in swtch.Cases) {
+                if (c.IsDefault) {
+                    Output.WriteRaw("default: ");
+                    Output.NewLine();
+                }
+
+                if (c.Values != null) {
+                    foreach (var value in c.Values) {
+                        Output.WriteRaw("case ");
+                        Visit(value);
+                        Output.WriteRaw(": ");
+                        Output.NewLine();
+                    }
+                }
+
+                Output.Indent();
+                Visit(c.Body);
+                Output.Unindent();
+                Output.NewLine();
+            }
+
+            Output.CloseBrace();
+            BlockStack.Pop();
+        }
+        */
+
         public void VisitNode (JSLabelGroupStatement lgs) {
             Formatter.ConditionalNewLine();
             Formatter.NewLine();
@@ -386,24 +495,22 @@ namespace WasmSExprEmitter {
         }
 
         public void VisitNode (JSBreakExpression be) {
-            int targetLoop;
-            if (be.TargetLoop.HasValue)
-                targetLoop = be.TargetLoop.Value;
-            else
-                targetLoop = Stack.OfType<JSLoopStatement>().First().Index.Value;
+            if (!be.TargetLoop.HasValue) {
+                // Switch break
+                return;
+            }
 
+            var targetLoop = be.TargetLoop.Value;
             Formatter.WriteSExpr(
                 "break", (_) => _.WriteRaw("$loop_{0}", be.TargetLoop.Value)
             );
         }
 
         public void VisitNode (JSContinueExpression ce) {
-            int targetLoop;
-            if (ce.TargetLoop.HasValue)
-                targetLoop = ce.TargetLoop.Value;
-            else
-                targetLoop = Stack.OfType<JSLoopStatement>().First().Index.Value;
+            if (!ce.TargetLoop.HasValue)
+                throw new Exception("Continue expression without target loop");
 
+            var targetLoop = ce.TargetLoop.Value;
             Formatter.WriteSExpr(
                 "break", (_) => _.WriteRaw("$loop_{0}_iterate", ce.TargetLoop.Value)
             );

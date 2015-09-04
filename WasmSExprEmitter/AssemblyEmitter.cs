@@ -103,6 +103,75 @@ namespace WasmSExprEmitter {
             Formatter.NewLine();
         }
 
+        private void EmitStringIntrinsics (int heapSize) {
+            Formatter.WriteRaw(";; Compiler-generated string table routines");
+            Formatter.NewLine();
+
+            Formatter.WriteRaw("(func $__getString (param $offset i32) (result i32)");
+            Formatter.NewLine();
+            Formatter.Indent();
+
+            Formatter.WriteRaw("(i32.add (i32.const {0}) (get_local $offset))", heapSize);
+            Formatter.NewLine();
+
+            Formatter.Unindent();
+            Formatter.WriteRaw(")");
+            Formatter.NewLine();
+            Formatter.NewLine();
+
+            Formatter.WriteRaw("(func $__getStringLength (param $offset i32) (result i32)");
+            Formatter.NewLine();
+            Formatter.Indent();
+
+            // FIXME: Switch statement or pull length out of memory segment
+            foreach (var e in StringTable.Values) {
+                Formatter.WriteRaw(
+                    "(if (i32.eq (i32.const {0}) (get_local $offset)) (return (i32.const {1})))",
+                    e.Offset, e.Bytes.Length
+                );
+                Formatter.NewLine();
+            }
+            // HACK
+            Formatter.WriteRaw("(return (i32.const 0))");
+            Formatter.NewLine();
+
+            Formatter.Unindent();
+            Formatter.WriteRaw(")");
+            Formatter.NewLine();
+            Formatter.NewLine();
+        }
+
+        private void EmitStringTable (int heapSize) {
+            Formatter.Indent();
+            Formatter.NewLine();
+
+            Formatter.WriteRaw(";; string table");
+            Formatter.NewLine();
+
+            foreach (var kvp in StringTable.OrderBy(kvp => kvp.Value.Offset)) {
+                Formatter.ConditionalNewLine();
+                Formatter.WriteRaw(
+                    "(segment {0} \"",
+                    kvp.Value.Offset + heapSize
+                );
+
+
+
+                foreach (var b in kvp.Value.Bytes) {
+                    if ((b < 32) || (b >= 127)) {
+                        Formatter.WriteRaw("\\{0:X2}", b);
+                    } else {
+                        Formatter.Output.Write((char)b);
+                    }
+                }
+
+                Formatter.WriteRaw("\")");
+            }
+
+            Formatter.Unindent();
+            Formatter.ConditionalNewLine();
+        }
+
         public void EmitFooter () {
             int heapSize = 0;
             if (Assembly.EntryPoint != null)
@@ -113,66 +182,13 @@ namespace WasmSExprEmitter {
             if (totalMemorySize > 0) {
                 Switch(PrecedingType.Memory);
 
-                if (StringTableSize > 0) {
-                    Formatter.WriteRaw(";; Compiler-generated string table routines");
-                    Formatter.NewLine();
-
-                    Formatter.WriteRaw("(func $__getString (param $offset i32) (result i32)");
-                    Formatter.NewLine();
-                    Formatter.Indent();
-
-                    Formatter.WriteRaw("(i32.add (i32.const {0}) (get_local $offset))", heapSize);
-                    Formatter.NewLine();
-
-                    Formatter.Unindent();
-                    Formatter.WriteRaw(")");
-                    Formatter.NewLine();
-                    Formatter.NewLine();
-
-                    Formatter.WriteRaw("(func $__getStringLength (param $offset i32) (result i32)");
-                    Formatter.NewLine();
-                    Formatter.Indent();
-
-                    // FIXME: Switch statement or pull length out of memory segment
-                    foreach (var e in StringTable.Values) {
-                        Formatter.WriteRaw(
-                            "(if (i32.eq (i32.const {0}) (get_local $offset)) (return (i32.const {1})))",
-                            e.Offset, e.Bytes.Length
-                        );
-                        Formatter.NewLine();
-                    }
-                    // HACK
-                    Formatter.WriteRaw("(return (i32.const 0))");
-                    Formatter.NewLine();
-
-                    Formatter.Unindent();
-                    Formatter.WriteRaw(")");
-                    Formatter.NewLine();
-                    Formatter.NewLine();
-                }
+                if (StringTableSize > 0)
+                    EmitStringIntrinsics(heapSize);
         
                 Formatter.WriteRaw("(memory {0} {0}", totalMemorySize);
 
-                if (StringTableSize > 0) {
-                    Formatter.Indent();
-                    Formatter.NewLine();
-
-                    Formatter.WriteRaw(";; string table");
-                    Formatter.NewLine();
-
-                    foreach (var kvp in StringTable.OrderBy(kvp => kvp.Value.Offset)) {
-                        Formatter.ConditionalNewLine();
-                        Formatter.WriteRaw(
-                            "(segment {0} \"{1}\")",
-                            kvp.Value.Offset + heapSize,
-                            // FIXME
-                            Encoding.ASCII.GetString(kvp.Value.Bytes)
-                        );
-                    }
-
-                    Formatter.Unindent();
-                    Formatter.ConditionalNewLine();
-                }
+                if (StringTableSize > 0)
+                    EmitStringTable(heapSize);
 
                 Formatter.WriteRaw(")");
                 Formatter.NewLine();

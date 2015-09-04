@@ -19,15 +19,19 @@ public static class Program {
     const int _Q = 32 * 2;
     const int _S = 32 * 3;
 
-    [Export]
-    public static void fannkuch (int n) {
-        int sign = 1, maxflips = 0, sum = 0, m = n - 1;
-
+    private static void initHeap (int n) {
         for (int i = 0; i < n; i++) {
             I32[_P, i] = i;
             I32[_Q, i] = i;
             I32[_S, i] = i;
         }
+    }
+
+    [Export]
+    public static void fannkuch (int n) {
+        int sign = 1, maxflips = 0, sum = 0, m = n - 1;
+
+        initHeap(n);
 
         do {
             // Copy and flip.            
