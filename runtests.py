@@ -16,7 +16,7 @@ def compile_cs(fileName):
     csc = "mcs"
 
   testName = os.path.basename(fileName)
-  compiledPath = "output/%s" % (testName.replace(".cs", ".exe"))
+  compiledPath = os.path.join("output", testName.replace(".cs", ".exe"))
 
   inTime = os.path.getmtime(fileName)
   try:
@@ -44,7 +44,8 @@ def translate(compiledPath):
   except OSError:
     pass
 
-  commandStr = ("third_party/JSIL/bin/JSILc.exe ./ilwasm.jsilconfig --quiet --nodefaults --nothreads --e=WasmSExpr --outputFile=%s %s") % (
+  commandStr = ("%s ./ilwasm.jsilconfig --quiet --nodefaults --nothreads --e=WasmSExpr --outputFile=%s %s") % (
+    os.path.join("third_party", "JSIL", "bin", "JSILc.exe"),
     wasmPath, compiledPath
   )
   exitCode = subprocess.call(commandStr, shell=True)
@@ -89,8 +90,8 @@ if __name__ == "__main__":
   except OSError:
     pass
 
-  testFiles = glob.glob("third_party/tests/*.cs")
-  unittest.TestLoader.testMethodPrefix = "third_party/tests"
+  testFiles = glob.glob(os.path.join("third_party", "tests", "*.cs"))
+  unittest.TestLoader.testMethodPrefix = os.path.join("third_party", "tests")
   generate_test_cases(RunTests, testFiles)
-  shutil.copy2("WasmMeta/bin/WasmMeta.dll", "output")
+  shutil.copy2(os.path.join("WasmMeta", "bin", "WasmMeta.dll"), "output")
   unittest.main()
