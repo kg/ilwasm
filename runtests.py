@@ -26,10 +26,16 @@ def compile_cs(fileName):
   except OSError:
     pass
 
-  commandStr = ("%s /nologo /langversion:6 /debug+ /debug:full %s /reference:WasmMeta/bin/WasmMeta.dll /out:%s") % (
-    csc, fileName, compiledPath
+  commandStr = ("%s /nologo /langversion:6 /debug+ /debug:full %s /reference:%s /out:%s") % (
+    csc, fileName, 
+    os.path.join("WasmMeta", "bin", "WasmMeta.dll"),
+    compiledPath
   )
   exitCode = subprocess.call(commandStr, shell=True)
+
+  if exitCode != 0:
+    print("failed while running '%s'" % commandStr)
+    print("")
 
   return (exitCode, compiledPath)
 
@@ -44,23 +50,37 @@ def translate(compiledPath):
   except OSError:
     pass
 
-  commandStr = ("%s ./ilwasm.jsilconfig --quiet --nodefaults --nothreads --e=WasmSExpr --outputFile=%s %s") % (
+  commandStr = ("%s ilwasm.jsilconfig --quiet --nodefaults --nothreads --e=WasmSExpr --outputFile=%s %s") % (
     os.path.join("third_party", "JSIL", "bin", "JSILc.exe"),
     wasmPath, compiledPath
   )
   exitCode = subprocess.call(commandStr, shell=True)
+
+  if exitCode != 0:
+    print("failed while running '%s'" % commandStr)
+    print("")
 
   return (exitCode, wasmPath)
 
 def run_csharp(compiledPath):
   commandStr = ("%s --quiet") % (compiledPath)
   exitCode = subprocess.call(commandStr, shell=True)
+
+  if exitCode != 0:
+    print("failed while running '%s'" % commandStr)
+    print("")
+
   return exitCode
 
 def run_wasm(wasmPath):
-  interpreterPath = os.path.realpath("../wasm-spec/ml-proto/src/main.native")
+  interpreterPath = os.path.realpath(os.path.join("..", "wasm-spec", "ml-proto", "src", "_build", "main.native"))
   commandStr = ("%s %s") % (interpreterPath, wasmPath)
   exitCode = subprocess.call(commandStr, shell=True)
+
+  if exitCode != 0:
+    print("failed while running '%s'" % commandStr)
+    print("")
+
   return exitCode
 
 
