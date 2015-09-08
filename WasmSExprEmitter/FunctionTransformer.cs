@@ -51,7 +51,19 @@ namespace WasmSExprEmitter {
         private JSExpression[] UnpackArgsArray (JSExpression expr) {
             JSExpression[] result;
 
-            var argumentsLiteral = (JSNewArrayExpression)expr;
+            var invoke = expr as JSInvocationExpression;
+            if (invoke != null) {
+                var m = invoke.JSMethod.Reference;
+                if ((m.Name == "Empty") && (m.DeclaringType.FullName == "System.Array"))
+                    return new JSExpression[0];
+
+                throw new Exception("Unhandled invocation as args array: " + invoke);
+            }
+
+            var argumentsLiteral = expr as JSNewArrayExpression;
+            if (argumentsLiteral == null)
+                throw new Exception("Expected arguments array but got " + expr.GetType().Name);
+
             var initializer = argumentsLiteral.SizeOrArrayInitializer;
             if (initializer is JSLiteral) {
                 // HACK: Is this right?
