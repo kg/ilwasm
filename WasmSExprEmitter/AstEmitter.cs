@@ -544,6 +544,13 @@ namespace WasmSExprEmitter {
 
         public void VisitNode (JSLiteral literal) {
             var literalType = literal.GetActualType(TypeSystem);
+
+            if ((literal is JSNullLiteral) && (literalType.FullName == "System.Object")) {
+                // HACK: ILSpy screws up the type inference...
+                VisitStringLiteral(null);
+                return;
+            }
+
             var typeToken = WasmUtil.PickTypeKeyword(literalType);
 
             if (typeToken == null) {
@@ -553,7 +560,7 @@ namespace WasmSExprEmitter {
             }
 
             if (literalType.FullName == "System.String") {
-                if (literal is JSDefaultValueLiteral) {
+                if ((literal is JSDefaultValueLiteral) || (literal is JSNullLiteral)) {
                     VisitStringLiteral(null);
                 } else {
                     var literalStr = (string)literal.Literal;
@@ -658,6 +665,58 @@ namespace WasmSExprEmitter {
                 "get_local",
                 (_) =>
                     _.WriteRaw("${0}", WasmUtil.EscapeIdentifier(variable.Name))
+            );
+        }
+
+        private void EmitLogicalNot (string typeToken, JSExpression expr) {
+            Formatter.WriteRaw("(i32.xor ");
+            Visit(expr);
+            Formatter.WriteRaw(" (i32.const 1))");
+        }
+
+        public void VisitNode (JSUnaryOperatorExpression uoe) {
+            var resultType = uoe.GetActualType(TypeSystem);
+            var typeToken = WasmUtil.PickTypeKeyword(resultType);
+
+            if (typeToken == null) {
+                Console.WriteLine("Unhandled unary operator type {0}", resultType);
+                return;
+            }
+
+            if (uoe.Operator == JSOperator.LogicalNot) {
+                EmitLogicalNot(typeToken, uoe.Expression);
+                return;
+            }
+
+            string keyword;
+            if (!OperatorTable.TryGetValue(uoe.Operator, out keyword)) {
+                Console.WriteLine("Unimplemented operator {0}", uoe.Operator);
+                return;
+            }
+
+            var operandType = uoe.Expression.GetActualType(TypeSystem);
+            var sign = TypeUtil.IsSigned(operandType);
+
+            var signSuffix = "";
+            if (
+                (sign.HasValue && TypeUtil.IsIntegral(operandType)) ||
+                // HACK
+                (operandType.FullName == "System.Char")
+            ) {
+                signSuffix = sign.GetValueOrDefault(true)
+                    ? "_s"
+                    : "_u";
+            }
+
+            var actualKeyword = string.Format(
+                typeToken + "." + keyword,
+                signSuffix
+            );
+
+            Formatter.WriteSExpr(
+                actualKeyword,
+                (_) => EmitArgumentList(_, new[] { uoe.Expression }, true),
+                true, false
             );
         }
 

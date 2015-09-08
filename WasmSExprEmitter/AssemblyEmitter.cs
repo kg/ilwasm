@@ -54,7 +54,7 @@ namespace WasmSExprEmitter {
         public int GetStringOffset (string str) {
             // HACK
             if (str == null)
-                str = "";
+                return 0;
 
             StringTableEntry result;
             if (!StringTable.TryGetValue(str, out result)) {
