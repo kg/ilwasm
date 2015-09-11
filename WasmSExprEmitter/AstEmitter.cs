@@ -50,6 +50,8 @@ namespace WasmSExprEmitter {
                 {JSOperator.LessThanOrEqual, "le{0}"},
                 {JSOperator.GreaterThan, "gt{0}"},
                 {JSOperator.GreaterThanOrEqual, "ge{0}"},
+                {JSOperator.ShiftLeft, "shl"},
+                {JSOperator.ShiftRight, "shr"},
             };
         }
 
@@ -389,47 +391,6 @@ namespace WasmSExprEmitter {
             Formatter.WriteRaw(")");
             Formatter.NewLine();
         }
-
-        /*
-        public void VisitNode (JSSwitchStatement swtch) {
-            BlockStack.Push(BlockType.Switch);
-            WriteLabel(swtch);
-
-            Output.WriteRaw("switch");
-            Output.Space();
-
-            Output.LPar();
-            Visit(swtch.Condition);
-            Output.RPar();
-            Output.Space();
-
-            Output.OpenBrace();
-
-            foreach (var c in swtch.Cases) {
-                if (c.IsDefault) {
-                    Output.WriteRaw("default: ");
-                    Output.NewLine();
-                }
-
-                if (c.Values != null) {
-                    foreach (var value in c.Values) {
-                        Output.WriteRaw("case ");
-                        Visit(value);
-                        Output.WriteRaw(": ");
-                        Output.NewLine();
-                    }
-                }
-
-                Output.Indent();
-                Visit(c.Body);
-                Output.Unindent();
-                Output.NewLine();
-            }
-
-            Output.CloseBrace();
-            BlockStack.Pop();
-        }
-        */
 
         public void VisitNode (JSLabelGroupStatement lgs) {
             Formatter.ConditionalNewLine();
@@ -870,7 +831,7 @@ namespace WasmSExprEmitter {
         public void VisitNode (AssertHeapEq asheq) {
             Formatter.WriteRaw("(assert_heap_eq {0} \"", asheq.Offset);
             WasmSExprAssemblyEmitter.EmitStringLiteralContents(
-                Formatter.Output, System.Text.Encoding.ASCII.GetBytes(asheq.Expected)
+                Formatter.Output, asheq.Expected
             );
             Formatter.WriteRaw("\")");
             Formatter.NewLine();
@@ -913,6 +874,10 @@ namespace WasmSExprEmitter {
 
             Formatter.Unindent();
             Formatter.WriteRaw(")");
+        }
+
+        public void VisitNode (JSCastExpression ce) {
+            Visit(ce.Expression);
         }
     }
 }

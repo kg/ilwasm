@@ -74,6 +74,9 @@ def run_csharp(compiledPath):
 
 def run_wasm(wasmPath):
   interpreterPath = os.path.realpath(os.path.join("..", "wasm-spec", "ml-proto", "src", "_build", "main.native"))
+  if not os.path.exists(interpreterPath):
+    interpreterPath = os.path.realpath(os.path.join("..", "wasm-spec", "ml-proto", "src", "_build", "host", "main.native"))
+
   commandStr = ("%s %s") % (interpreterPath, wasmPath)
   exitCode = subprocess.call(commandStr, shell=True)
 

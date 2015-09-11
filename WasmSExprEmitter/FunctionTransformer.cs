@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using JSIL;
 using JSIL.Ast;
 using JSIL.Compiler.Extensibility;
@@ -21,14 +22,18 @@ namespace WasmSExprEmitter {
             result = default(T);
 
             var literal = expr as JSLiteral;
-            if (literal == null)
+            if (literal == null) {
+                // Console.WriteLine("ExtractLiteral<{0}> got non-literal {1}", typeof(T).FullName, expr);
                 return false;
+            }
 
-            if (!(literal.Literal is T))
+            try {
+                result = (T)Convert.ChangeType(literal.Literal, typeof(T));
+                return true;
+            } catch (Exception exception) {
+                Console.WriteLine("ExtractLiteral<{0}> failed {1}", typeof(T).FullName, exception.Message);
                 return false;
-
-            result = (T)literal.Literal;
-            return true;
+            }
         }
 
         private static JSExpression Add (TypeSystem typeSystem, JSExpression lhs, JSExpression rhs) {
@@ -131,11 +136,41 @@ namespace WasmSExprEmitter {
 
                 case "System.Void Wasm.Test::AssertHeapEq(System.Int32,System.String)": {
                     int offset;
-                    if (ExtractLiteral(arguments[0], out offset))
+                    if (!ExtractLiteral(arguments[0], out offset))
                         throw new Exception("Expected offset as arg0 of assertheapeq");
+
                     string expected;
                     if (!ExtractLiteral(arguments[1], out expected))
-                        throw new Exception("Expected expected as arg2 of assertheapeq");
+                        throw new Exception("Expected expected as arg1 of assertheapeq");
+                    return new AssertHeapEq(offset, expected);
+                }
+
+                case "System.Void Wasm.Test::AssertHeapEqFile(System.Int32,System.Int32,System.String)": {
+                    int offset;
+                    if (!ExtractLiteral(arguments[0], out offset))
+                        throw new Exception("Expected offset as arg0 of assertheapeqfile");
+
+                    int count;
+                    if (!ExtractLiteral(arguments[1], out count))
+                        throw new Exception("Expected count as arg1 of assertheapeqfile");
+
+                    string fileName;
+                    if (!ExtractLiteral(arguments[2], out fileName))
+                        throw new Exception("Expected fileName as arg2 of assertheapeqfile");
+
+                    var actualPath = Path.Combine("third_party", "test_data", fileName);
+                    if (!File.Exists(actualPath))
+                        throw new FileNotFoundException("Test expects result contained in nonexistent file", actualPath);
+
+                    var expectedBytes = File.ReadAllBytes(actualPath);
+                    if (count != expectedBytes.Length)
+                        throw new Exception("Size of expected data file '" + actualPath + "' does not match count argument " + count);
+
+                    var sb = new StringBuilder();
+                    for (var i = 0; i < count; i++)
+                        sb.Append((char)expectedBytes[i]);
+
+                    var expected = sb.ToString();
                     return new AssertHeapEq(offset, expected);
                 }
 
@@ -216,7 +251,8 @@ namespace WasmSExprEmitter {
                 }
             }
 
-            // Console.WriteLine("// Treating method '{0}' as runtime call", fullName);
+            if (true)
+                Console.WriteLine("// Treating method '{0}' as runtime call", fullName);
             return null;
         }
     }

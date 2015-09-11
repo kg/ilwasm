@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using JSIL.Meta;
 
 namespace Wasm {
@@ -115,27 +116,41 @@ namespace Wasm {
             );
         }
 
-        private static string FormatHeapRange (int offset, int count) {
+        private static IEnumerable<byte> RawCharsToBytes (IEnumerable<char> chars) {
+            return (from ch in chars select (byte)ch);
+        }
+
+        private static string FormatBytestring (IEnumerable<byte> bytes) {
             var sb = new StringBuilder();
-
-            for (var i = 0; i < count; i++) {
-                char ch = (char)Wasm.Heap.U8[offset, i];
-
-                if ((ch < 32) || (ch >= 127)) {
-                    sb.AppendFormat("\\x{0:X2}", (int)ch);
+            foreach (var b in bytes) {
+                if ((b < 32) || (b >= 127)) {
+                    sb.AppendFormat("\\x{0:X2}", (int)b);
                 } else {
-                    sb.Append(ch);
+                    sb.Append((char)b);
                 }
             }
 
             return sb.ToString();
         }
 
-        private static bool TestHeapEq (int offset, string expected) {
-            for (var i = 0; i < expected.Length; i++) {
-                char ch = (char)Wasm.Heap.U8[offset, i];
-                if (ch != expected[i])
+        private static IEnumerable<byte> GetHeapRange (int offset, int count) {
+            var indices = Enumerable.Range(0, count);
+            var bytes = (from i in indices select Wasm.Heap.U8[offset, i]);
+            return bytes;
+        }
+
+        private static string FormatHeapRange (int offset, int count) {
+            return FormatBytestring(GetHeapRange(offset, count));
+        }
+
+        private static bool TestHeapEq (int offset, IEnumerable<byte> expected) {
+            int i = 0;
+            foreach (var expectedByte in expected) {
+                byte b = Wasm.Heap.U8[offset, i];
+                if (b != expectedByte)
                     return false;
+
+                i++;
             }
 
             return true;
@@ -143,7 +158,9 @@ namespace Wasm {
 
         public static void AssertHeapEq (int offset, string expected) {
             var assembly = Assembly.GetCallingAssembly();
-            var passed = TestHeapEq(offset, expected);
+            var expectedBytes = RawCharsToBytes(expected);
+
+            var passed = TestHeapEq(offset, expectedBytes);
 
             if (QuietMode && passed)
                 return;
@@ -153,11 +170,41 @@ namespace Wasm {
                 "(assert_heap_eq {1} \"{2}\"){0}" +
                 "-> {3} \"{2}\" == \"{4}\"",
                 Environment.NewLine,
-                offset, expected,
+                offset, FormatBytestring(expectedBytes),
                 passed
                     ? "pass"
                     : "fail",
-                FormatHeapRange(offset, expected.Length)
+                FormatHeapRange(offset, expectedBytes.Count())
+            );
+        }
+
+        public static void AssertHeapEqFile (int offset, int count, string expectedFileName) {
+            var assembly = Assembly.GetCallingAssembly();
+
+            var actualBytes = GetHeapRange(offset, count);
+            var actualFileName = Path.Combine("output", expectedFileName);
+            File.WriteAllBytes(actualFileName, actualBytes.ToArray());
+
+            var fullExpectedFileName = Path.Combine("third_party", "test_data", expectedFileName);
+
+            var expectedBytes = File.ReadAllBytes(fullExpectedFileName);
+
+            var passed = TestHeapEq(offset, expectedBytes) && (count == expectedBytes.Length);
+
+            if (QuietMode && passed)
+                return;
+
+            PrintHeader(assembly);
+            Console.WriteLine(
+                "(assert_heap_eq {1} '{2}'){0}" +
+                "-> {3} '{4}' == '{5}'",
+                Environment.NewLine,
+                offset, expectedFileName,
+                passed
+                    ? "pass"
+                    : "fail",
+                fullExpectedFileName,
+                actualFileName
             );
         }
 
@@ -171,14 +218,21 @@ namespace Wasm {
                 return;
 
             PrintHeader(assembly);
-            Console.WriteLine(
-                "(invoke \"{1}\" {2}){0}" +
-                "-> {3}",
-                Environment.NewLine,
-                exportedFunctionName,
-                string.Join(" ", values),
-                result
-            );
+            if (export.ReturnType.Name != "Void")
+                Console.WriteLine(
+                    "(invoke \"{1}\" {2}){0}" +
+                    "-> {3}",
+                    Environment.NewLine,
+                    exportedFunctionName,
+                    string.Join(" ", values),
+                    result
+                );
+            else
+                Console.WriteLine(
+                    "(invoke \"{0}\" {1})",
+                    exportedFunctionName,
+                    string.Join(" ", values)
+                );
         }
     }
 }
