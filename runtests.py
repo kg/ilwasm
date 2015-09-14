@@ -50,7 +50,7 @@ def translate(compiledPath):
   except OSError:
     pass
 
-  commandStr = ("%s ilwasm.jsilconfig --quiet --nodefaults --nothreads --e=WasmSExpr --outputFile=%s %s") % (
+  commandStr = ("%s ilwasm.jsilconfig --quiet --nodefaults --e=WasmSExpr --outputFile=%s %s") % (
     os.path.join("third_party", "JSIL", "bin", "JSILc.exe"),
     wasmPath, compiledPath
   )

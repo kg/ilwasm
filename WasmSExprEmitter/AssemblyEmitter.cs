@@ -128,7 +128,7 @@ namespace WasmSExprEmitter {
             Formatter.Indent();
 
             Formatter.WriteRaw(
-                "(return (i32.load/i32/1 (i32.sub (get_local $firstCharAddress) (i32.const 4))))"
+                "(return (i32.load/1 (i32.sub (get_local $firstCharAddress) (i32.const 4))))"
             );
             Formatter.NewLine();
 

@@ -39,19 +39,24 @@ namespace WasmSExprEmitter {
 
         static AstEmitter () {
             OperatorTable = new Dictionary<JSOperator, string> {
-                {JSOperator.Add, "add"},
-                {JSOperator.Multiply, "mul"},
-                {JSOperator.Subtract, "sub"},
-                {JSOperator.Equal, "eq"},
-                {JSOperator.EqualLoose, "eq"},
-                {JSOperator.NotEqual, "neq"},
-                {JSOperator.NotEqualLoose, "neq"},
-                {JSOperator.LessThan, "lt{0}"},
-                {JSOperator.LessThanOrEqual, "le{0}"},
-                {JSOperator.GreaterThan, "gt{0}"},
-                {JSOperator.GreaterThanOrEqual, "ge{0}"},
-                {JSOperator.ShiftLeft, "shl"},
+                {JSOperator.Add,        "add"},
+                {JSOperator.Subtract,   "sub"},
+                {JSOperator.Multiply,   "mul"},
+                {JSOperator.Divide,     "div{0}"},
+                {JSOperator.Remainder,  "rem{0}"},
+                {JSOperator.ShiftLeft,  "shl"},
                 {JSOperator.ShiftRight, "shr"},
+                {JSOperator.BitwiseAnd, "and"},
+                {JSOperator.BitwiseOr,  "or"},
+                {JSOperator.BitwiseXor, "xor"},
+                {JSOperator.Equal,         "eq"},
+                {JSOperator.EqualLoose,    "eq"},
+                {JSOperator.NotEqual,      "neq"},
+                {JSOperator.NotEqualLoose, "neq"},
+                {JSOperator.LessThan,      "lt{0}"},
+                {JSOperator.GreaterThan,   "gt{0}"},
+                {JSOperator.LessThanOrEqual,    "le{0}"},
+                {JSOperator.GreaterThanOrEqual, "ge{0}"},
             };
         }
 
@@ -503,8 +508,8 @@ namespace WasmSExprEmitter {
             Formatter.WriteSExpr("untranslatable." + expression.GetType().Name, lineBreakAfter: IsTopLevel);
         }
 
-        public void VisitNode (JSLiteral literal) {
-            var literalType = literal.GetActualType(TypeSystem);
+        private void VisitLiteral (JSLiteral literal, TypeReference forcedType = null) {
+            var literalType = forcedType ?? literal.GetActualType(TypeSystem);
 
             if ((literal is JSNullLiteral) && (literalType.FullName == "System.Object")) {
                 // HACK: ILSpy screws up the type inference...
@@ -546,6 +551,18 @@ namespace WasmSExprEmitter {
                 // HACK
                 (_) => Formatter.Value(literalValue)
             );
+        }
+
+        public void VisitNode (JSChangeTypeExpression cte) {
+            var literal = cte.Expression as JSLiteral;
+            if (literal != null)
+                VisitLiteral(literal, cte.NewType);
+            else
+                Visit(cte.Expression);
+        }
+
+        public void VisitNode (JSLiteral literal) {
+            VisitLiteral(literal, null);
         }
 
         private void VisitStringLiteral (string s) {
@@ -725,9 +742,18 @@ namespace WasmSExprEmitter {
                 signSuffix
             );
 
+            // HACK: wasm i64 shift takes i64 shift amount
+            var right = boe.Right;
+            if (
+                (boe.Operator == JSOperator.ShiftLeft) ||
+                (boe.Operator == JSOperator.ShiftRight)
+            ) {
+                right = JSChangeTypeExpression.New(right, leftType, TypeSystem);
+            }
+
             Formatter.WriteSExpr(
                 actualKeyword,
-                (_) => EmitArgumentList(_, new[] { boe.Left, boe.Right }, true),
+                (_) => EmitArgumentList(_, new[] { boe.Left, right }, true),
                 true, false
             );
         }
@@ -817,6 +843,27 @@ namespace WasmSExprEmitter {
             );
         }
 
+        public void VisitNode (JSTruncateExpression trunc) {
+            // No-op. Only necessary in JS because of int ops producing floats
+            EmitCast(
+                trunc.Expression, 
+                trunc.GetActualType(TypeSystem)
+            );
+        }
+
+        public void VisitNode (JSTernaryOperatorExpression ternary) {
+            Formatter.WriteSExpr(
+                "if",
+                (_) => {
+                    Visit(ternary.Condition);
+                    Formatter.ConditionalNewLine();
+                    Visit(ternary.True);
+                    Formatter.ConditionalNewLine();
+                    Visit(ternary.False);
+                }
+            );
+        }
+
         public void VisitNode (AssertEq aseq) {
             Formatter.WriteRaw("(assert_eq (invoke ");
             Formatter.Value(aseq.ExportedFunctionName);
@@ -877,7 +924,57 @@ namespace WasmSExprEmitter {
         }
 
         public void VisitNode (JSCastExpression ce) {
-            Visit(ce.Expression);
+            EmitCast(
+                ce.Expression, 
+                ce.GetActualType(TypeSystem)
+            );
+        }
+
+        void EmitCast (JSExpression value, TypeReference toType) {
+            var fromType = value.GetActualType(TypeSystem);
+
+            var fromIntegral = TypeUtil.IsIntegral(fromType);
+            var toIntegral   = TypeUtil.IsIntegral(toType);
+
+            var fromSize = TypeUtil.SizeOfType(fromType);
+            var toSize   = TypeUtil.SizeOfType(toType);
+
+            var fromSign = TypeUtil.IsSigned(fromType);
+            var toSign   = TypeUtil.IsSigned(toType);
+
+            var signSuffix = fromSign.GetValueOrDefault(toSign.GetValueOrDefault(true))
+                ? "s"
+                : "u";
+
+            if (fromIntegral && toIntegral) {
+                if ((toSize == 4) && (fromSize == 8)) {
+                    Formatter.WriteRaw("(i32.wrap/i64 ");
+                    Visit(value);
+                    Formatter.WriteRaw(")");
+                    return;
+                } else if ((toSize == 8) && (fromSize == 4)) {
+                    Formatter.WriteRaw("(i64.extend_{0}/i32 ", signSuffix);
+                    Visit(value);
+                    Formatter.WriteRaw(")");
+                    return;
+                } else if ((toSize == fromSize) && (toSign != fromSign)) {
+                    Visit(value);
+                    return;
+                }
+            } else if (toIntegral) {
+                Formatter.WriteRaw(
+                    "({0}.trunc_{1}/{2} ", 
+                    WasmUtil.PickTypeKeyword(toType),
+                    signSuffix,
+                    WasmUtil.PickTypeKeyword(fromType)
+                );
+                Visit(value);
+                Formatter.WriteRaw(")");
+                return;                
+            }
+
+            Console.WriteLine("unimplemented cast {0} -> {1}", fromType, toType);
+            Visit(value);
         }
     }
 }

@@ -3,6 +3,7 @@
   "ProxyWarnings": false,
   "UseDefaultProxies": false,
   "UseLocalProxies": false,
+  "UseThreads": false,
   "CodeGenerator": {
     "StripUnusedLoopNames": "false"
   },

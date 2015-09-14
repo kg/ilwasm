@@ -43,6 +43,7 @@ namespace WasmSExprEmitter {
 
             result.CodeGenerator.IntroduceCharCasts = false;
             result.CodeGenerator.IntroduceEnumCasts = false;
+            result.CodeGenerator.EmulateInt64       = false;
 
             return result;
         }

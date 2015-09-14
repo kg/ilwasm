@@ -58,20 +58,30 @@ namespace WasmSExprEmitter {
             return null;
         }
 
-        public static string PickMemoryTypeKeyword (TypeReference type) {
+        public static string PickMemoryTypeSuffix (TypeReference type, bool isStore) {
             switch (type.FullName) {
                 case "System.Byte":
+                    if (isStore)
+                        return "8";
+                    else
+                        return "8_u";
+
                 case "System.SByte":
-                    return "i8";
+                    return "8";
 
                 case "System.UInt16":
+                    if (isStore)
+                        return "16";
+                    else
+                        return "16_u";
+
                 case "System.Int16":
-                    return "i16";
+                    return "16";
 
                 // FIXME: i8 or i16 for char?
             }
 
-            return PickTypeKeyword(type);
+            return "";
         }
 
         public static void ConditionalNewLine (this JavascriptFormatter formatter) {

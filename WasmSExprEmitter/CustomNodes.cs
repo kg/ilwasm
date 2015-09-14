@@ -86,9 +86,9 @@ namespace WasmSExprEmitter {
             JSExpression addressInBytes
         ) : base (
             string.Format(
-                "{0}.load/{1}{2}",
+                "{0}.load{1}{2}",
                 WasmUtil.PickTypeKeyword(type),
-                WasmUtil.PickMemoryTypeKeyword(type),
+                WasmUtil.PickMemoryTypeSuffix(type, false),
                 isAligned
                     ? ""
                     : "/1"
@@ -125,9 +125,9 @@ namespace WasmSExprEmitter {
             JSExpression addressInBytes, JSExpression value
         ) : base (
             string.Format(
-                "{0}.store/{1}{2}",
+                "{0}.store{1}{2}",
                 WasmUtil.PickTypeKeyword(type),
-                WasmUtil.PickMemoryTypeKeyword(type),
+                WasmUtil.PickMemoryTypeSuffix(type, true),
                 isAligned
                     ? ""
                     : "/1"
