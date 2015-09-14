@@ -251,7 +251,7 @@ namespace WasmSExprEmitter {
                 }
             }
 
-            if (true)
+            if (false)
                 Console.WriteLine("// Treating method '{0}' as runtime call", fullName);
             return null;
         }

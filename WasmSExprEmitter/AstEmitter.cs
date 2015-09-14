@@ -646,12 +646,6 @@ namespace WasmSExprEmitter {
             );
         }
 
-        private void EmitLogicalNot (string typeToken, JSExpression expr) {
-            Formatter.WriteRaw("(i32.xor ");
-            Visit(expr);
-            Formatter.WriteRaw(" (i32.const 1))");
-        }
-
         public void VisitNode (JSUnaryOperatorExpression uoe) {
             var resultType = uoe.GetActualType(TypeSystem);
             var typeToken = WasmUtil.PickTypeKeyword(resultType);
@@ -662,7 +656,14 @@ namespace WasmSExprEmitter {
             }
 
             if (uoe.Operator == JSOperator.LogicalNot) {
-                EmitLogicalNot(typeToken, uoe.Expression);
+                Formatter.WriteRaw("({0}.xor ", typeToken);
+                Visit(uoe.Expression);
+                Formatter.WriteRaw(" ({0}.const 1))", typeToken);
+                return;
+            } else if (uoe.Operator == JSOperator.Negation) {
+                Formatter.WriteRaw("({0}.sub ({0}.const 0) ", typeToken);
+                Visit(uoe.Expression);
+                Formatter.WriteRaw(")", typeToken);
                 return;
             }
 

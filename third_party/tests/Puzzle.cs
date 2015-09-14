@@ -1,3 +1,4 @@
+// see llvm_license.txt
 // https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/Benchmarks/BenchmarkGame/puzzle.c
 
 using System;
@@ -10,8 +11,7 @@ using iptr = System.Int32;
 
 public static class Program {
     const int   ARRAY_SIZE = 5000;
-    const int   NLOOPS1    = 5;
-    const int   NLOOPS2    = 200;
+    const int   NLOOPS1    = 10;
 
     const int   RAND_MAX          = 32767;
     const int   RAND_MAX_PLUSONE  = RAND_MAX + 1;
@@ -19,7 +19,13 @@ public static class Program {
 
     const int   INT_SIZE   = 4;
 
+    const int   STDOUT          = 40960;
+    const int   STDOUT_CAPACITY = 1024;
+
     static long next = 1;
+
+    [Export]
+    public static int  stdout_length { get; set; }
 
     // RNG implemented localy to avoid library incongruences
     static int rand () {
@@ -93,8 +99,7 @@ public static class Program {
 
         for (i = 0; i < NLOOPS1; i++) {
             rndArr = createRandomArray(ARRAY_SIZE);
-            for (j = 0; j < NLOOPS2; j++)
-                duplicate = findDuplicate(rndArr, ARRAY_SIZE+1);
+            duplicate = findDuplicate(rndArr, ARRAY_SIZE+1);
             ifree(rndArr);
 
             prints("Found duplicate: ");
@@ -104,22 +109,62 @@ public static class Program {
     }
 
     static iptr imalloc (int size) {
-        return default(iptr);
+        // HACK: always put data at 0
+        return 0;
     }
 
     static void ifree (iptr ptr) {
+        // HACK: no-op
     }
 
     static void prints (string str) {
+        int l = str.Length;
+        for (int i = 0; i < l; i++) {
+            U8[STDOUT, stdout_length] = (byte)str[i];
+            stdout_length = stdout_length + 1;
+        }
     }
 
     static void printi (int value) {
+        const byte zero = (byte)'0';
+
+        int initial_offset = stdout_length;
+        bool negative = value < 0;
+
+        if (negative)
+            value = -value;
+
+        // Output number in reverse
+        for (int i = 0; value > 0; value = value / 10) {
+            var digit = value % 10;
+            U8[STDOUT, stdout_length] = (byte)(zero + digit);
+            stdout_length = stdout_length + 1;
+        }
+
+        if (negative) {
+            U8[STDOUT, stdout_length] = (byte)'-';
+            stdout_length = stdout_length + 1;
+        }
+
+        // In-place reverse result into correct order
+        int j = (stdout_length - initial_offset) - 1;
+        int reverse_base = STDOUT + initial_offset;
+        for (int i = 0; i < j; i += 1, j -= 1) {
+            byte temp = U8[reverse_base, i];
+            U8[reverse_base, i] = U8[reverse_base, j];
+            U8[reverse_base, j] = temp;
+        }
     }
 
     static void Main () {
-        SetHeapSize(102400);
+        SetHeapSize(STDOUT + STDOUT_CAPACITY);
 
         Invoke("test");
+
+        const int expectedLength = 219;
+
+        AssertEq(expectedLength, "get_stdout_length");
+        AssertHeapEqFile(STDOUT, expectedLength, "puzzle.log");
     }
 
 }
