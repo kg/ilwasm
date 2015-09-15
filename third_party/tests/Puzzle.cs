@@ -104,15 +104,18 @@ public static unsafe class Program {
         // HACK: no-op
     }
 
+    static void putchar (int ch) {
+        U8[STDOUT, stdout_length] = (byte)ch;
+        stdout_length++;
+    }
+
     static void prints (string str) {
-        for (int i = 0,  l = str.Length; i < l; i++) {
-            U8[STDOUT, stdout_length] = (byte)str[i];
-            stdout_length++;
-        }
+        for (int i = 0, l = str.Length; i < l; i++)
+            putchar(str[i]);
     }
 
     static void printi (int value) {
-        const byte zero = (byte)'0';
+        const int zero = '0';
 
         int initial_offset = stdout_length;
         bool negative = value < 0;
@@ -121,16 +124,11 @@ public static unsafe class Program {
             value = -value;
 
         // Output number in reverse
-        for (int i = 0; value > 0; value = value / 10) {
-            var digit = value % 10;
-            U8[STDOUT, stdout_length] = (byte)(zero + digit);
-            stdout_length++;
-        }
+        for (int i = 0; value > 0; value = value / 10)
+            putchar(zero + (value % 10));
 
-        if (negative) {
-            U8[STDOUT, stdout_length] = (byte)'-';
-            stdout_length++;
-        }
+        if (negative)
+            putchar('-');
 
         // In-place reverse result into correct order
         int j = (stdout_length - initial_offset) - 1;
