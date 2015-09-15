@@ -14,6 +14,8 @@ Tests are placed in the ```third_party/tests``` directory as .cs files. A test h
 
 The entry point's body must contain only calls to APIs from ```Wasm.Test```, like ```SetHeapSize``` or ```AssertEq```. Constants are fine but locals, branching or other behavior are not allowed in the entry point, as it is converted into top-level wasm assertions.
 
+For more sophisticated tests, ```AssertHeapEq``` and ```AssertHeapEqFile``` can be used to assert against the contents of the wasm heap. ```AssertHeapEqFile``` will produce the actual contents of the heap as a file in the ```output``` directory during test runs, for debugging.
+
 ### Exports
 
 A test can export static methods with the Wasm.Module.Export attribute, like so:
@@ -35,6 +37,8 @@ value = Wasm.Heap.U8[@base, offset];
 
 The heap is not accessible externally (i.e. in the entry point) so to perform assertions against heap data, you must expose the heap via an exported function.
 
+You can get the base of the heap as a pointer using the Base property of the heap fields, i.e. ```Wasm.Heap.I32.Base```.
+
 ### Fields and properties
 
 Static fields of supported types work. To access a field's value from outside, export accessor methods, or simply define it as an exported property:
@@ -51,4 +55,3 @@ Currently only integral and floating-point types are supported. Functions and va
 
 * Structs
 * ref/out parameters
-* Pointers
