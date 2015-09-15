@@ -30,8 +30,7 @@ public static class Program {
     // RNG implemented localy to avoid library incongruences
     static int rand () {
         next = (next * 1103515245) + 12345;
-        long divided = next >> 16;
-        return (int)(((uint)divided) % RAND_MAX_PLUSONE);
+        return (int)(((uint)next >> 16) % RAND_MAX_PLUSONE);
     }
 
     static void srand (uint seed) {
@@ -39,38 +38,31 @@ public static class Program {
     }
 
     static int randInt (int min, int max) {
-        int k, n;
-        n = (max - min) + 1;
-        float randval = rand();
-        randval = randval / RAND_MAX_PLUSONEF;
-        k = (int)(n * randval);
+        int n = (max - min) + 1;
+        float randval = rand() / RAND_MAX_PLUSONEF;
+        int k = (int)(n * randval);
         return (k == n) ? k + min - 1 : k + min;
     }
 
     static void shuffle (iptr items, int len) {
-        int j, k, i;
-        int aux;
+        for (int i = len-1; i > 0; --i) {
+            float randval = rand() / RAND_MAX_PLUSONEF;
+            int k = (int)((i + 1) * randval);
+            int j = (k == (i + 1)) ? k - 1 : k;
 
-        for (i = len-1; i > 0; --i) {
-            float randval = rand();
-            randval = randval / RAND_MAX_PLUSONEF;
-            k = (int)((i + 1) * randval);
-            j = (k == (i + 1)) ? k - 1 : k;
-
-            aux = I32[items, i];
+            int aux = I32[items, i];
             I32[items, i] = I32[items, j];
             I32[items, j] = aux;
         }
     }
 
     static iptr createRandomArray (int size) {
-        int i, len;
         iptr result;
 
-        len = size + 1;
+        int len = size + 1;
         result = imalloc(len);
 
-        for (i = 0; i < len; i++)
+        for (int i = 0; i < len; i++)
             I32[result, i] = i;
 
         I32[result, 0] = randInt(1, size);
@@ -80,10 +72,9 @@ public static class Program {
     }
 
     static int findDuplicate (iptr data, int len) {
-        int i;
         int result = 0;
 
-        for (i = 0; i < len; i++)
+        for (int i = 0; i < len; i++)
             result = result ^ (i + 1) ^ I32[data, i];
 
         result ^= len;
@@ -92,12 +83,12 @@ public static class Program {
 
     [Export]
     static void test () {
-        int i, j, duplicate = 0;
+        int duplicate = 0;
         iptr rndArr;
 
         srand(1);
 
-        for (i = 0; i < NLOOPS1; i++) {
+        for (int i = 0; i < NLOOPS1; i++) {
             rndArr = createRandomArray(ARRAY_SIZE);
             duplicate = findDuplicate(rndArr, ARRAY_SIZE+1);
             ifree(rndArr);
@@ -118,10 +109,9 @@ public static class Program {
     }
 
     static void prints (string str) {
-        int l = str.Length;
-        for (int i = 0; i < l; i++) {
+        for (int i = 0,  l = str.Length; i < l; i++) {
             U8[STDOUT, stdout_length] = (byte)str[i];
-            stdout_length = stdout_length + 1;
+            stdout_length++;
         }
     }
 
@@ -138,12 +128,12 @@ public static class Program {
         for (int i = 0; value > 0; value = value / 10) {
             var digit = value % 10;
             U8[STDOUT, stdout_length] = (byte)(zero + digit);
-            stdout_length = stdout_length + 1;
+            stdout_length++;
         }
 
         if (negative) {
             U8[STDOUT, stdout_length] = (byte)'-';
-            stdout_length = stdout_length + 1;
+            stdout_length++;
         }
 
         // In-place reverse result into correct order
