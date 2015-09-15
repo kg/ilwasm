@@ -21,6 +21,9 @@ namespace WasmSExprEmitter {
         }
 
         public static string PickTypeKeyword (TypeReference type) {
+            if (type.IsPointer)
+                return "i32";
+
             // FIXME
             switch (type.FullName) {
                 case "System.Void":

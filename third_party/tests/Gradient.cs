@@ -79,7 +79,8 @@ public static class Program {
     public static void Main () {
         SetHeapSize(20480);
 
-        AssertEq(210, "generateGradient", 0);
-        AssertHeapEqFile(0, 210, "gradient.tga");
+        const int expectedLength = 210;
+        AssertEq(expectedLength, "generateGradient", 0);
+        AssertHeapEqFile(0, expectedLength, "gradient.tga");
     }
 }

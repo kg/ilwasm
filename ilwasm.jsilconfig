@@ -5,7 +5,8 @@
   "UseLocalProxies": false,
   "UseThreads": false,
   "CodeGenerator": {
-    "StripUnusedLoopNames": "false"
+    "StripUnusedLoopNames": "false",
+    "EnableUnsafeCode": "true"
   },
   "Assemblies": {
     "Stubbed": [

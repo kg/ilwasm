@@ -48,6 +48,12 @@ namespace Wasm {
     [JSExternal]
     [JSImmutable]
     public unsafe class HeapI32 {
+        public int* Base {
+            get {
+                return (int*)Heap.Access(0);
+            }
+        }
+
         public int this [int offset] {
             get {
                 int* ints = (int*)Heap.Access(offset * 4);
@@ -73,6 +79,12 @@ namespace Wasm {
     [JSExternal]
     [JSImmutable]
     public unsafe class HeapU8 {
+        public byte* Base {
+            get {
+                return (byte*)Heap.Access(0);
+            }
+        }
+
         public byte this [int offset] {
             get {
                 var bytes = Heap.Access(offset);

@@ -249,10 +249,16 @@ namespace WasmSExprEmitter {
                 case "System.Int32 System.String::get_Length()": {
                     return new GetStringLength(thisExpression);
                 }
+
+                case "System.Int32* Wasm.HeapI32::get_Base()":
+                case "System.Byte* Wasm.HeapU8::get_Base()": {
+                    return JSLiteral.DefaultValue(method.ReturnType);
+                }
             }
 
             if (false)
                 Console.WriteLine("// Treating method '{0}' as runtime call", fullName);
+
             return null;
         }
     }

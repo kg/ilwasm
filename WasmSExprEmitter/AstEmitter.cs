@@ -634,7 +634,7 @@ namespace WasmSExprEmitter {
                 );
 
             } else {
-                Console.WriteLine("Invalid assignment target {0}", target);
+                Console.WriteLine("Invalid assignment target {0} {1}", target.GetType().Name, target);
                 return;
             }
         }
@@ -977,6 +977,59 @@ namespace WasmSExprEmitter {
 
             Console.WriteLine("unimplemented cast {0} -> {1}", fromType, toType);
             Visit(value);
+        }
+
+        public void VisitNode (JSPointerAddExpression pae) {
+            var pointerType = pae.Pointer.GetActualType(TypeSystem);
+            var synthesized = new JSBinaryOperatorExpression(
+                JSOperator.Add, pae.Pointer, pae.Delta, pointerType
+            );
+
+            Visit(synthesized);
+        }
+
+        private JSExpression ComputeAddress (
+            JSExpression pointer, JSExpression offsetInElements, JSExpression offsetInBytes,
+            out TypeReference elementType
+        ) {
+            var pointerType = pointer.GetActualType(TypeSystem);
+            elementType = pointerType.GetElementType();
+            var elementSize = TypeUtil.SizeOfType(elementType);
+
+            if (
+                (offsetInElements != null) && 
+                // I'm so helpful :-)))))
+                (offsetInBytes == null)
+            ) {
+                offsetInBytes = new JSBinaryOperatorExpression(
+                    JSOperator.Multiply,
+                    offsetInElements,
+                    JSLiteral.New(elementSize),
+                    pointerType
+                );
+            }
+
+            if (offsetInBytes != null) {
+                return new JSPointerAddExpression(pointer, offsetInBytes, false);
+            } else {
+                return pointer;
+            }
+        }
+
+        public void VisitNode (JSWriteThroughPointerExpression wtpe) {
+            TypeReference elementType;
+            var address = ComputeAddress(wtpe.Left, wtpe.OffsetInElements, wtpe.OffsetInBytes, out elementType);
+
+            var synthesized = new SetMemory(elementType, false, address, wtpe.Right);
+            Visit(synthesized);
+        }
+
+        public void VisitNode (JSReadThroughPointerExpression rtpe) {
+            TypeReference elementType;
+            var address = ComputeAddress(rtpe.Pointer, rtpe.OffsetInElements, rtpe.OffsetInBytes, out elementType);
+
+            var synthesized = new GetMemory(elementType, false, address);
+            Visit(synthesized);
         }
     }
 }

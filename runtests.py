@@ -26,7 +26,7 @@ def compile_cs(fileName):
   except OSError:
     pass
 
-  commandStr = ("%s /nologo /langversion:6 /debug+ /debug:full %s /reference:%s /out:%s") % (
+  commandStr = ("%s /nologo /langversion:6 /debug+ /unsafe+ /debug:full %s /reference:%s /out:%s") % (
     csc, fileName, 
     os.path.join("WasmMeta", "bin", "WasmMeta.dll"),
     compiledPath
@@ -92,10 +92,19 @@ class RunTests(unittest.TestCase):
     (exitCode, compiledPath) = compile_cs(fileName)
     self.assertEqual(0, exitCode, "C# compiler failed with exit code %i" % exitCode)
     (exitCode, wasmPath) = translate(compiledPath)
-    self.assertEqual(0, exitCode, "JSILc failed with exit code %i" % exitCode)
+
+    if exitCode != 0:
+      # HACK: If JSILc fails ensure that the C# compile and JSILc compile are repeated next run
+      os.unlink(compiledPath)
+    self.assertEqual(0, exitCode, "JSILc failed with exit code %i" % exitCode)    
+
     exitCode = run_csharp(compiledPath)
     self.assertEqual(0, exitCode, "C# test case failed with exit code %i" % exitCode)
     exitCode = run_wasm(wasmPath)
+
+    if exitCode != 0:
+      # HACK: If JSILc fails ensure that the C# compile and JSILc compile are repeated next run
+      os.unlink(compiledPath)
     self.assertEqual(0, exitCode, "wasm interpreter failed with exit code %i" % exitCode)
 
 def generate_test_case(fileName):
