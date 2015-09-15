@@ -1,3 +1,5 @@
+//#use lib/Stdout.cs
+
 // see llvm_license.txt
 // https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/Benchmarks/BenchmarkGame/puzzle.c
 
@@ -6,6 +8,12 @@ using Wasm.Module;
 
 using static Wasm.Heap;
 using static Wasm.Test;
+using static Stdout;
+
+public static partial class Stdout {
+    public const int HeapBase     = 20480;
+    public const int HeapCapacity = 2048;
+}
 
 public static unsafe class Program {
     const int   ARRAY_SIZE = 5000;
@@ -17,13 +25,7 @@ public static unsafe class Program {
 
     const int   INT_SIZE   = 4;
 
-    const int   STDOUT          = 40960;
-    const int   STDOUT_CAPACITY = 1024;
-
     static long next = 1;
-
-    [Export]
-    public static int  stdout_length { get; set; }
 
     // RNG implemented localy to avoid library incongruences
     static int rand () {
@@ -104,51 +106,15 @@ public static unsafe class Program {
         // HACK: no-op
     }
 
-    static void putchar (int ch) {
-        U8[STDOUT, stdout_length] = (byte)ch;
-        stdout_length++;
-    }
-
-    static void prints (string str) {
-        for (int i = 0, l = str.Length; i < l; i++)
-            putchar(str[i]);
-    }
-
-    static void printi (int value) {
-        const int zero = '0';
-
-        int initial_offset = stdout_length;
-        bool negative = value < 0;
-
-        if (negative)
-            value = -value;
-
-        // Output number in reverse
-        for (int i = 0; value > 0; value = value / 10)
-            putchar(zero + (value % 10));
-
-        if (negative)
-            putchar('-');
-
-        // In-place reverse result into correct order
-        int j = (stdout_length - initial_offset) - 1;
-        int reverse_base = STDOUT + initial_offset;
-        for (int i = 0; i < j; i += 1, j -= 1) {
-            byte temp = U8[reverse_base, i];
-            U8[reverse_base, i] = U8[reverse_base, j];
-            U8[reverse_base, j] = temp;
-        }
-    }
-
     static void Main () {
-        SetHeapSize(STDOUT + STDOUT_CAPACITY);
+        SetHeapSize(Stdout.HeapBase + Stdout.HeapCapacity);
 
         Invoke("test");
 
         const int expectedLength = 219;
 
         AssertEq(expectedLength, "get_stdout_length");
-        AssertHeapEqFile(STDOUT, expectedLength, "puzzle.log");
+        AssertHeapEqFile(Stdout.HeapBase, expectedLength, "puzzle.log");
     }
 
 }

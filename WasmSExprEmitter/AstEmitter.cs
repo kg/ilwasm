@@ -962,6 +962,15 @@ namespace WasmSExprEmitter {
                 } else if ((toSize == fromSize) && (toSign != fromSign)) {
                     Visit(value);
                     return;
+                } else if ((toSize == 2) || (toSize == 1)) {
+                    var mask = (1 << (8 * toSize)) - 1;
+                    var synthesized = new JSBinaryOperatorExpression(
+                        JSOperator.BitwiseAnd,
+                        value, JSLiteral.New(mask),
+                        toType
+                    );
+                    Visit(synthesized);
+                    return;
                 }
             } else if (toIntegral) {
                 Formatter.WriteRaw(

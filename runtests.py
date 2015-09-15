@@ -8,6 +8,17 @@ import subprocess
 import glob
 import sys
 import shutil
+import re
+
+def get_libs(fileName):
+  with open(fileName, "r") as f:
+    text = f.read()
+
+  libComments = re.finditer("//#use (.*)", text)
+
+  return list(
+    os.path.join(os.path.dirname(fileName), match.group(1)) for match in libComments
+  )
 
 def compile_cs(fileName):
   if platform.system() == "Windows":
@@ -18,16 +29,30 @@ def compile_cs(fileName):
   testName = os.path.basename(fileName)
   compiledPath = os.path.join("output", testName.replace(".cs", ".exe"))
 
+  libs = get_libs(fileName)
+
   inTime = os.path.getmtime(fileName)
+
   try:
     outTime = os.path.getmtime(compiledPath)
-    if (outTime > inTime):
-      return (0, compiledPath)
   except OSError:
+    outTime = 0
     pass
 
+  isNewer = (outTime > inTime)
+
+  for libName in libs:
+    if os.path.getmtime(libName) > outTime:
+      isNewer = False
+      break
+
+  if isNewer:
+    return (0, compiledPath)
+
+  fileNames = [fileName] + libs
+
   commandStr = ("%s /nologo /langversion:6 /debug+ /unsafe+ /debug:full %s /reference:%s /out:%s") % (
-    csc, fileName, 
+    csc, " ".join(fileNames), 
     os.path.join("WasmMeta", "bin", "WasmMeta.dll"),
     compiledPath
   )
