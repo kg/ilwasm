@@ -26,7 +26,7 @@ public static partial class Stdout {
             value = -value;
 
         // Output number in reverse
-        for (int i = 0; value > 0; value = value / 10)
+        for (; value > 0; value = value / 10)
             putchar(zero + (value % 10));
 
         if (negative)

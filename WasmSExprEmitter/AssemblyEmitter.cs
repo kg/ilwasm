@@ -18,10 +18,20 @@ namespace WasmSExprEmitter {
             public int    Offset;
             public int    SizeBytes;
 
-            public StringTableEntry (int offset, string text) {
-                Offset = offset;
-                Bytes = Encoding.ASCII.GetBytes(text);
+            public StringTableEntry (WasmSExprAssemblyEmitter emitter, string text) {
+                Bytes = Encoding.UTF8.GetBytes(text);
                 SizeBytes = Bytes.Length + 8;
+                Offset = emitter.ReserveHeapSpace(SizeBytes);
+            }
+        }
+
+        private struct FieldTableEntry {
+            public int             Offset;
+            public FieldDefinition Field;
+
+            public FieldTableEntry (int offset, FieldDefinition field) {
+                Offset = offset;
+                Field = field;
             }
         }
 
@@ -40,15 +50,42 @@ namespace WasmSExprEmitter {
         public readonly AssemblyDefinition Assembly;
         public readonly JavascriptFormatter Formatter;
 
+        private readonly Dictionary<string, FieldTableEntry>  FieldTable  = new Dictionary<string, FieldTableEntry>();
         private readonly Dictionary<string, StringTableEntry> StringTable = new Dictionary<string, StringTableEntry>();
-        private int      StringTableSize = 0;
+
+        private int      AssignedHeapSize = 0;
+        private bool     NeedStaticInit   = false;
+
+        private readonly HashSet<TypeDefinition> TypesToStaticInitialize  = new HashSet<TypeDefinition>();
 
         private PrecedingType Preceding;
+
 
         public WasmSExprAssemblyEmitter (AssemblyTranslator translator, AssemblyDefinition assembly, JavascriptFormatter formatter) {
             Translator = translator;
             Assembly = assembly;
             Formatter = formatter;
+        }
+
+        private int ReserveHeapSpace (int size) {
+            var result = AssignedHeapSize;
+            AssignedHeapSize += Math.Max(8, size);
+            return result;
+        }
+
+        public int GetFieldOffset (FieldDefinition fd) {
+            var key = fd.FullName;
+
+            FieldTableEntry result;
+            if (!FieldTable.TryGetValue(key, out result)) {
+                var size = TypeUtil.SizeOfType(fd.FieldType);
+                var offset = ReserveHeapSpace(size);
+
+                result = new FieldTableEntry(offset, fd);
+                FieldTable.Add(key, result);                
+            }
+
+            return result.Offset;
         }
 
         public int GetStringOffset (string str) {
@@ -58,8 +95,7 @@ namespace WasmSExprEmitter {
 
             StringTableEntry result;
             if (!StringTable.TryGetValue(str, out result)) {
-                result = new StringTableEntry(StringTableSize, str);
-                StringTableSize += result.SizeBytes;
+                result = new StringTableEntry(this, str);
                 StringTable.Add(str, result);
             }
 
@@ -81,9 +117,11 @@ namespace WasmSExprEmitter {
         }
 
         public void BeginEmitTypeDeclaration (TypeDefinition typedef) {
+            TypesToStaticInitialize.Add(typedef);
         }
 
         public void BeginEmitTypeDefinition (IAstEmitter astEmitter, TypeDefinition typedef, TypeInfo typeInfo, TypeReference baseClass) {
+            TypesToStaticInitialize.Add(typedef);
         }
 
         public void EmitAssemblyEntryPoint (AssemblyDefinition assembly, MethodDefinition entryMethod, MethodSignature signature) {
@@ -101,6 +139,90 @@ namespace WasmSExprEmitter {
             Formatter.WriteRaw("(module \n");
             Formatter.Indent();
             Formatter.NewLine();
+        }
+
+        private void EmitFieldIntrinsics (int heapSize) {
+            // FIXME: Gross
+            var tis = (ITypeInfoSource)Translator.TypeInfoProvider;
+
+            Formatter.WriteRaw(";; Compiler-generated field accessors");
+            Formatter.NewLine();
+
+            foreach (var kvp in FieldTable.OrderBy(kvp => kvp.Value.Offset)) {
+                var fd   = kvp.Value.Field;
+                var fi   = tis.Get(fd);
+                var name = WasmUtil.EscapeIdentifier(fi.DeclaringType.FullName + "_" + fi.Name);
+
+                Formatter.ConditionalNewLine();
+                Formatter.WriteRaw(
+                    "(func $__get_{0} (result {1}) (return ", 
+                    name,
+                    WasmUtil.PickTypeKeyword(fd.FieldType)
+                );
+                var gm = new GetMemory(
+                    fd.FieldType, /* FIXME: Align addresses */ false,
+                    JSLiteral.New(kvp.Value.Offset + heapSize)
+                );
+
+                // HACK
+                EntryPointAstEmitter.Emit(gm);
+
+                Formatter.WriteRaw(") )");
+
+                if (fd.IsInitOnly)
+                    continue;
+
+                Formatter.NewLine();
+                Formatter.WriteRaw(
+                    "(func $__set_{0} (param $value {1}) ", 
+                    name,
+                    WasmUtil.PickTypeKeyword(fd.FieldType)
+                );
+                Formatter.Indent();
+                Formatter.NewLine();
+                var sm = new SetMemory(
+                    fd.FieldType, /* FIXME: Align addresses */ false,
+                    JSLiteral.New(kvp.Value.Offset + heapSize),
+                    // HACK
+                    new JSVariable("value", fd.FieldType, null)
+                );
+
+                // HACK
+                EntryPointAstEmitter.Emit(sm);
+
+                Formatter.Unindent();
+                Formatter.ConditionalNewLine();
+                Formatter.WriteRaw(")");
+            }
+
+            Formatter.NewLine();
+            Formatter.NewLine();
+        }
+
+        private void EmitFieldTable (int heapSize) {
+            // FIXME: ml-proto ordered segment constraint; also cctor might do this for us
+            /*
+            Formatter.Indent();
+            Formatter.NewLine();
+
+            Formatter.WriteRaw(";; fields");
+            Formatter.NewLine();
+
+            foreach (var kvp in FieldTable.OrderBy(kvp => kvp.Value.Offset)) {
+                Formatter.ConditionalNewLine();
+                Formatter.WriteRaw(
+                    "(segment {0} \"",
+                    kvp.Value.Offset + heapSize
+                );
+
+                EmitStringLiteralContents(Formatter.Output, (from b in kvp.Value.Bytes select (char)b));
+
+                Formatter.WriteRaw("\")");
+            }
+
+            Formatter.Unindent();
+            Formatter.ConditionalNewLine();
+            */
         }
 
         private void EmitStringIntrinsics (int heapSize) {
@@ -175,27 +297,95 @@ namespace WasmSExprEmitter {
             Formatter.ConditionalNewLine();
         }
 
+        private void EmitCctors () {
+            // HACK
+            var identifier = (MemberIdentifier)Activator.CreateInstance(
+                typeof(MemberIdentifier),
+                System.Reflection.BindingFlags.Instance | 
+                    System.Reflection.BindingFlags.NonPublic, 
+                null,
+                new object[] {
+                    true, MemberIdentifier.MemberType.Method, 
+                    ".cctor", EntryPointAstEmitter.TypeSystem.Void, 
+                    null, 0
+                },
+                null
+            );
+
+            // Find types we emitted that have static constructors
+            var cctors = (
+                from t in TypesToStaticInitialize
+                let ti = Translator.TypeInfoProvider.GetExisting(t)
+                where ti.Members.ContainsKey(identifier)
+                let mi = ti.Members[identifier]
+                select (MethodInfo)mi
+            ).ToList();
+
+            if (cctors.Count == 0)
+                return;
+
+            NeedStaticInit = true;
+            Formatter.NewLine();
+
+            Formatter.WriteRaw(";; Compiler-generated static constructor dispatcher");
+            Formatter.NewLine();
+            // If we found any, we need to generate a special function that invokes all the cctors
+            Formatter.WriteRaw("(func $__static_init (block ");
+            Formatter.Indent();
+            Formatter.NewLine();
+
+            // FIXME: Walk cctor dependencies and invoke in correct order
+            foreach (var cctor in cctors) {
+                // Synthesize a regular static method call
+                var jsm = new JSMethod(
+                    cctor.Member, cctor, Translator.FunctionCache.MethodTypes
+                );
+                var call = JSInvocationExpression.InvokeStatic(jsm, new JSExpression[0], false);
+
+                // HACK
+                EntryPointAstEmitter.Emit(call);
+                Formatter.ConditionalNewLine();
+            }
+
+            Formatter.Unindent();
+            Formatter.ConditionalNewLine();
+            Formatter.WriteRaw(") )");
+            Formatter.NewLine();
+            Formatter.NewLine();
+
+            Formatter.WriteRaw("(export \"__static_init\" $__static_init)");
+            Formatter.NewLine();
+        }
+
         public void EmitFooter () {
             int heapSize = 0;
             if (Assembly.EntryPoint != null)
                 WasmUtil.HeapSizes.TryGetValue(Assembly.EntryPoint.DeclaringType, out heapSize);
 
-            int totalMemorySize = heapSize + StringTableSize;
+            int totalMemorySize = heapSize + AssignedHeapSize;
 
             if (totalMemorySize > 0) {
                 Switch(PrecedingType.Memory);
 
-                if (StringTableSize > 0)
+                if (StringTable.Count > 0)
                     EmitStringIntrinsics(heapSize);
+
+                if (FieldTable.Count > 0)
+                    EmitFieldIntrinsics(heapSize);
         
                 Formatter.WriteRaw("(memory {0} {0}", totalMemorySize);
 
-                if (StringTableSize > 0)
+                if (StringTable.Count > 0)
                     EmitStringTable(heapSize);
+
+                if (FieldTable.Count > 0)
+                    EmitFieldTable(heapSize);
 
                 Formatter.WriteRaw(")");
                 Formatter.NewLine();
             }
+
+            EmitCctors();
 
             Formatter.Unindent();
             Formatter.NewLine();
@@ -218,6 +408,13 @@ namespace WasmSExprEmitter {
             var mainEmitter = new AstEmitter(this, Formatter, astEmitter.JSIL, astEmitter.TypeSystem, astEmitter.TypeInfo, astEmitter.Configuration, isTopLevel: true);
 
             Switch(PrecedingType.TopLevel);
+
+            if (NeedStaticInit) {
+                Formatter.ConditionalNewLine();
+                Formatter.WriteRaw("(invoke \"__static_init\")");
+                Formatter.NewLine();
+                Formatter.NewLine();
+            }
 
             var body = mainExpression.Body;
             foreach (var stmt in body.Statements) {
@@ -270,10 +467,7 @@ namespace WasmSExprEmitter {
             if (typeKeyword == null)
                 return;
 
-            Switch(PrecedingType.Global);
-
-            Formatter.WriteRaw("(global ${0} {1})", WasmUtil.EscapeIdentifier(fieldInfo.Name), typeKeyword);
-            Formatter.ConditionalNewLine();
+            GetFieldOffset(field);
         }
 
         public void EmitConstant (DecompilerContext context, IAstEmitter astEmitter, FieldDefinition field, JSRawOutputIdentifier dollar, JSExpression value) {

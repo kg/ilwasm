@@ -52,8 +52,8 @@ namespace WasmSExprEmitter {
                 {JSOperator.BitwiseXor, "xor"},
                 {JSOperator.Equal,         "eq"},
                 {JSOperator.EqualLoose,    "eq"},
-                {JSOperator.NotEqual,      "neq"},
-                {JSOperator.NotEqualLoose, "neq"},
+                {JSOperator.NotEqual,      "ne"},
+                {JSOperator.NotEqualLoose, "ne"},
                 {JSOperator.LessThan,      "lt{0}"},
                 {JSOperator.GreaterThan,   "gt{0}"},
                 {JSOperator.LessThanOrEqual,    "le{0}"},
@@ -592,7 +592,7 @@ namespace WasmSExprEmitter {
         }
 
         private string EscapedName (FieldInfo fi) {
-            return WasmUtil.EscapeIdentifier(fi.Name);
+            return WasmUtil.EscapeIdentifier(fi.DeclaringType.FullName + "_" + fi.Name);
         }
 
         private void Assign (JSExpression target, JSExpression value) {
@@ -611,14 +611,14 @@ namespace WasmSExprEmitter {
                 );
 
             } else if (leftField != null) {
-                Formatter.WriteSExpr(
-                    "store_global",
-                    (_) => {
-                        _.WriteRaw("${0} ", EscapedName(leftField));
-                        Visit(value);
-                    },
-                    lineBreakAfter: true
+                Formatter.WriteRaw(
+                    "(call $__set_{0} ",
+                    EscapedName(leftField)
                 );
+
+                Visit(value);
+                Formatter.WriteRaw(")");
+                Formatter.NewLine();
 
             } else if (leftProp != null) {
                 var method = leftProp.OriginalMethod;
@@ -763,19 +763,22 @@ namespace WasmSExprEmitter {
         private void EmitArgumentList<TArgs> (JavascriptFormatter formatter, TArgs arguments, bool interiorLineBreak = false)
             where TArgs : IEnumerable<JSNode>
         {
+            var first = true;
+
             foreach (var arg in arguments) {
                 // FIXME: Should we put something else here?
                 if (arg == null)
                     continue;
 
-                Visit(arg);
-
-                if (!formatter.PreviousWasLineBreak) {
+                if (!first && !formatter.PreviousWasLineBreak) {
                     if (interiorLineBreak)
                         formatter.NewLine();
                     else
                         formatter.Space();
                 }
+
+                Visit(arg);
+                first = false;
             }
         }
 
@@ -890,12 +893,10 @@ namespace WasmSExprEmitter {
             if (fa.IsWrite)
                 throw new Exception("Unhandled field write: " + fa);
 
-            Formatter.WriteSExpr(
-                "load_global",
-                (_) => {
-                    _.WriteRaw("${0}", EscapedName(fa));
-                }
-            );                
+            Formatter.WriteRaw(
+                "(call $__get_{0})",
+                EscapedName(fa)
+            );
         }
 
         public void VisitNode (JSPropertyAccess pa) {
@@ -1039,6 +1040,10 @@ namespace WasmSExprEmitter {
 
             var synthesized = new GetMemory(elementType, false, address);
             Visit(synthesized);
+        }
+
+        public void VisitNode (JSRawOutputIdentifier roi) {
+            Formatter.WriteRaw(roi.Format, roi.Arguments);
         }
     }
 }
