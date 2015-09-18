@@ -8,8 +8,8 @@ using static Wasm.Heap;
 using static Wasm.Test;
 
 public static class Program {
-    public const int HeapSize = (1024 * 128);
-    public const int MaxResultCount = 4096;
+    public const int HeapSize = (1024 * 4);
+    public const int MaxResultCount = 512;
 
     [Export]
     public static int ResultCount { get; set; }

@@ -77,7 +77,7 @@ public static class Program {
     }
 
     public static void Main () {
-        SetHeapSize(20480);
+        SetHeapSize(2048);
 
         const int expectedLength = 210;
         AssertEq(expectedLength, "generateGradient", 0);
