@@ -592,7 +592,7 @@ namespace WasmSExprEmitter {
         }
 
         private string EscapedName (FieldInfo fi) {
-            return WasmUtil.EscapeIdentifier(fi.DeclaringType.FullName + "_" + fi.Name);
+            return WasmUtil.FormatMemberName(fi.Member);
         }
 
         private void Assign (JSExpression target, JSExpression value) {
@@ -615,6 +615,11 @@ namespace WasmSExprEmitter {
                     "(call $__set_{0} ",
                     EscapedName(leftField)
                 );
+
+                if (!leftField.Field.Field.IsStatic) {
+                    Visit(leftField.Target);
+                    Formatter.WriteRaw(" ");
+                }
 
                 Visit(value);
                 Formatter.WriteRaw(")");
@@ -704,11 +709,6 @@ namespace WasmSExprEmitter {
             var boeType = boe.GetActualType(TypeSystem);
             var typeToken = WasmUtil.PickTypeKeyword(boeType);
 
-            if (typeToken == null) {
-                Console.WriteLine("Unhandled binary operator type {0}", boeType);
-                return;
-            }
-
             if (boe.Operator == JSOperator.Assignment) {
                 Assign(boe.Left, boe.Right);
                 return;
@@ -751,6 +751,11 @@ namespace WasmSExprEmitter {
                 (boe.Operator == JSOperator.ShiftRight)
             ) {
                 right = JSChangeTypeExpression.New(right, leftType, TypeSystem);
+            }
+
+            if (typeToken == null) {
+                Console.WriteLine("Unhandled binary operator type {0} ({1})", boeType, boe);
+                return;
             }
 
             Formatter.WriteSExpr(
@@ -825,10 +830,12 @@ namespace WasmSExprEmitter {
             var methodDef = jsm.Reference.Resolve();
             var memberName = WasmUtil.FormatMemberName(methodDef);
 
+            var manyArgs = ie.Arguments.Count > 2;
+
             Formatter.WriteSExpr("call", (_) => {
                 _.WriteRaw("${0} ", memberName);
-                EmitArgumentList(_, ie.Arguments, false);
-            });
+                EmitArgumentList(_, ie.Arguments, manyArgs);
+            }, lineBreakInside: manyArgs);
         }
 
         public void VisitNode (JSIntegerToFloatExpression itfe) {
@@ -893,10 +900,19 @@ namespace WasmSExprEmitter {
             if (fa.IsWrite)
                 throw new Exception("Unhandled field write: " + fa);
 
-            Formatter.WriteRaw(
-                "(call $__get_{0})",
-                EscapedName(fa)
-            );
+            if (fa.Field.Field.IsStatic)
+                Formatter.WriteRaw(
+                    "(call $__get_{0})",
+                    EscapedName(fa)
+                );
+            else {
+                Formatter.WriteRaw(
+                    "(call $__get_{0} ",
+                    EscapedName(fa)
+                );
+                Visit(fa.Target);
+                Formatter.WriteRaw(")");
+            }
         }
 
         public void VisitNode (JSPropertyAccess pa) {
@@ -939,8 +955,8 @@ namespace WasmSExprEmitter {
             var fromIntegral = TypeUtil.IsIntegral(fromType);
             var toIntegral   = TypeUtil.IsIntegral(toType);
 
-            var fromSize = TypeUtil.SizeOfType(fromType);
-            var toSize   = TypeUtil.SizeOfType(toType);
+            var fromSize = WasmUtil.SizeOfType(fromType);
+            var toSize   = WasmUtil.SizeOfType(toType);
 
             var fromSign = TypeUtil.IsSigned(fromType);
             var toSign   = TypeUtil.IsSigned(toType);
@@ -1004,7 +1020,7 @@ namespace WasmSExprEmitter {
         ) {
             var pointerType = pointer.GetActualType(TypeSystem);
             elementType = pointerType.GetElementType();
-            var elementSize = TypeUtil.SizeOfType(elementType);
+            var elementSize = WasmUtil.SizeOfType(elementType);
 
             if (
                 (offsetInElements != null) && 
@@ -1044,6 +1060,15 @@ namespace WasmSExprEmitter {
 
         public void VisitNode (JSRawOutputIdentifier roi) {
             Formatter.WriteRaw(roi.Format, roi.Arguments);
+        }
+
+        public void VisitNode (JSSizeOfExpression sizeofExp) {
+            var type = sizeofExp.Type.Type;
+            Formatter.WriteRaw("(i32.const (; sizeof {0} ;) {1})", type, WasmUtil.SizeOfType(type));
+        }
+
+        public void VisitNode (JSPointerCastExpression pce) {
+            Visit(pce.Pointer);
         }
     }
 }

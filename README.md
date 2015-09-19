@@ -53,5 +53,6 @@ Currently only integral and floating-point types are supported. Functions and va
 
 ### Future features
 
-* Structs
+* Struct fields
+* Struct locals
 * ref/out parameters

@@ -111,6 +111,22 @@ namespace WasmSExprEmitter {
                         isConstantIfArgumentsAre: true
                     );
 
+                case "System.Double System.Math::Floor(System.Double)":
+                    return new AbstractSExpression(
+                        "f64.floor",
+                        typeSystem.Double,
+                        arguments,
+                        isConstantIfArgumentsAre: true
+                    );
+
+                case "System.Double System.Math::Ceiling(System.Double)":
+                    return new AbstractSExpression(
+                        "f64.ceil",
+                        typeSystem.Double,
+                        arguments,
+                        isConstantIfArgumentsAre: true
+                    );
+
                 case "System.Void Wasm.Test::Printf(System.String,System.Object[])":
                     // HACK: Ignored for now
                     return new JSNullExpression();

@@ -38,12 +38,13 @@ namespace WasmSExprEmitter {
             var result = configuration.Clone();
 
             // The default proxies contain JS-specific replacements/hacks that aren't necessarily correct for wasm
-            result.UseDefaultProxies = false;
+            result.UseDefaultProxies   = false;
             result.IncludeDependencies = false;
 
-            result.CodeGenerator.IntroduceCharCasts = false;
-            result.CodeGenerator.IntroduceEnumCasts = false;
-            result.CodeGenerator.EmulateInt64       = false;
+            result.CodeGenerator.IntroduceCharCasts            = false;
+            result.CodeGenerator.IntroduceEnumCasts            = false;
+            result.CodeGenerator.EmulateInt64                  = false;
+            result.CodeGenerator.DecomposeAllMutationOperators = true;
 
             return result;
         }

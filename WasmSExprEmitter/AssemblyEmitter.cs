@@ -73,13 +73,17 @@ namespace WasmSExprEmitter {
             return result;
         }
 
-        public int GetFieldOffset (FieldDefinition fd) {
+        public int? GetFieldOffset (FieldDefinition fd) {
             var key = fd.FullName;
 
             FieldTableEntry result;
             if (!FieldTable.TryGetValue(key, out result)) {
-                var size = TypeUtil.SizeOfType(fd.FieldType);
-                var offset = ReserveHeapSpace(size);
+                var size = WasmUtil.SizeOfType(fd.FieldType);
+
+                // HACK HACK HACK
+                int offset = fd.IsStatic 
+                    ? (int)ReserveHeapSpace(size) 
+                    : WasmUtil.OffsetOfField(fd);
 
                 result = new FieldTableEntry(offset, fd);
                 FieldTable.Add(key, result);                
@@ -150,18 +154,40 @@ namespace WasmSExprEmitter {
 
             foreach (var kvp in FieldTable.OrderBy(kvp => kvp.Value.Offset)) {
                 var fd   = kvp.Value.Field;
-                var fi   = tis.Get(fd);
-                var name = WasmUtil.EscapeIdentifier(fi.DeclaringType.FullName + "_" + fi.Name);
+                var fi   = (FieldInfo)tis.Get(fd);
+                var name = WasmUtil.FormatMemberName(fi.Member);
+                var typeSystem = fd.FieldType.Module.TypeSystem;
+
+                // HACK
+                var baseAddressParam = new JSVariable("address", typeSystem.Int32, null);
+                // HACK
+                var valueParam = new JSVariable("value", fd.FieldType, null);
+
+                JSExpression address;
+                if (fd.IsStatic) {
+                    address = JSLiteral.New(kvp.Value.Offset + heapSize);
+                } else {
+                    address = new JSBinaryOperatorExpression(
+                        JSOperator.Add,
+                        baseAddressParam,
+                        JSLiteral.New(kvp.Value.Offset),
+                        typeSystem.Int32
+                    );
+                }
 
                 Formatter.ConditionalNewLine();
                 Formatter.WriteRaw(
-                    "(func $__get_{0} (result {1}) (return ", 
+                    "(func $__get_{0} (result {1}){2}(return ", 
                     name,
-                    WasmUtil.PickTypeKeyword(fd.FieldType)
+                    WasmUtil.PickTypeKeyword(fd.FieldType),
+                    fd.IsStatic
+                        ? " "
+                        : " (param $address i32) "
                 );
+
                 var gm = new GetMemory(
                     fd.FieldType, /* FIXME: Align addresses */ false,
-                    JSLiteral.New(kvp.Value.Offset + heapSize)
+                    address
                 );
 
                 // HACK
@@ -174,17 +200,18 @@ namespace WasmSExprEmitter {
 
                 Formatter.NewLine();
                 Formatter.WriteRaw(
-                    "(func $__set_{0} (param $value {1}) ", 
+                    "(func $__set_{0}{2}(param $value {1}) ", 
                     name,
-                    WasmUtil.PickTypeKeyword(fd.FieldType)
+                    WasmUtil.PickTypeKeyword(fd.FieldType),
+                    fd.IsStatic
+                        ? " "
+                        : " (param $address i32) "
                 );
                 Formatter.Indent();
                 Formatter.NewLine();
                 var sm = new SetMemory(
                     fd.FieldType, /* FIXME: Align addresses */ false,
-                    JSLiteral.New(kvp.Value.Offset + heapSize),
-                    // HACK
-                    new JSVariable("value", fd.FieldType, null)
+                    address, valueParam
                 );
 
                 // HACK

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using JSIL;
 using JSIL.Internal;
 using Mono.Cecil;
 
@@ -11,9 +12,12 @@ namespace WasmSExprEmitter {
         public static readonly Dictionary<TypeDefinition, int> HeapSizes = new Dictionary<TypeDefinition, int>(new ReferenceComparer<TypeDefinition>());
 
         public static string FormatMemberName (IMemberDefinition member) {
-            return EscapeIdentifier(
-                member.DeclaringType.Name + "_" + member.Name
-            );
+            var typePrefix = member.DeclaringType.Name + "_";
+
+            if (member.Name.Contains(typePrefix))
+                return EscapeIdentifier(member.Name);
+            else
+                return EscapeIdentifier(typePrefix + member.Name);
         }
 
         public static string EscapeIdentifier (string identifier) {
@@ -85,6 +89,40 @@ namespace WasmSExprEmitter {
             }
 
             return "";
+        }
+
+        public static int OffsetOfField (FieldDefinition fd) {
+            int result = 0;
+            var td = fd.DeclaringType.Resolve();
+
+            foreach (var _fd in td.Fields) {
+                if (fd == _fd)
+                    return result;
+
+                result += SizeOfType(_fd.FieldType);
+            }
+
+            throw new Exception("Error computing field offset");
+        }
+
+        public static int SizeOfStruct (TypeReference type) {
+            int result = 0;
+            var td = type.Resolve();
+
+            foreach (var fd in td.Fields)
+                result += SizeOfType(fd.FieldType);
+
+            return result;
+        }
+
+        public static int SizeOfType (TypeReference type) {
+            if (type.IsPointer)
+                return 4;
+
+            if (type.IsValueType && !type.IsPrimitive)
+                return SizeOfStruct(type);
+
+            return TypeUtil.SizeOfType(type);
         }
 
         public static void ConditionalNewLine (this JavascriptFormatter formatter) {
