@@ -20,17 +20,16 @@ public static unsafe class Program {
     const int   NLOOPS1    = 10;
 
     const int   RAND_MAX          = 32767;
-    const int   RAND_MAX_PLUSONE  = RAND_MAX + 1;
     const float RAND_MAX_PLUSONEF = RAND_MAX + 1.0f;
 
     const int   INT_SIZE   = 4;
 
-    static long next = 1;
+    static ulong next = 1;
 
     // RNG implemented localy to avoid library incongruences
     static int rand () {
-        next = (next * 1103515245) + 12345;
-        return (int)((uint)(next >> 16) % RAND_MAX_PLUSONE);
+        next = next * 1103515245 + 12345;
+        return (int)((uint)(next / 65536) % RAND_MAX+1);
     }
 
     static void srand (uint seed) {
