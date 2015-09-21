@@ -289,7 +289,11 @@ namespace WasmSExprEmitter {
 
         public static void EmitStringLiteralContents (System.IO.TextWriter tw, IEnumerable<char> text) {
             foreach (var ch in text) {
-                if ((ch < 32) || (ch >= 127)) {
+                if (ch == '\\') {
+                    tw.Write("\\\\");
+                } else if (ch == '"') {
+                    tw.Write("\\\"");
+                } else if ((ch < 32) || (ch >= 127)) {
                     tw.Write("\\{0:X2}", (byte)ch);
                 } else {
                     tw.Write(ch);

@@ -111,22 +111,6 @@ namespace WasmSExprEmitter {
                         isConstantIfArgumentsAre: true
                     );
 
-                case "System.Double System.Math::Sin(System.Double)":
-                    return new AbstractSExpression(
-                        "f64.sin",
-                        typeSystem.Double,
-                        arguments,
-                        isConstantIfArgumentsAre: true
-                    );
-
-                case "System.Double System.Math::Cos(System.Double)":
-                    return new AbstractSExpression(
-                        "f64.cos",
-                        typeSystem.Double,
-                        arguments,
-                        isConstantIfArgumentsAre: true
-                    );
-
                 case "System.Double System.Math::Floor(System.Double)":
                     return new AbstractSExpression(
                         "f64.floor",

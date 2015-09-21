@@ -558,8 +558,10 @@ namespace WasmSExprEmitter {
             var literal = cte.Expression as JSLiteral;
             if (literal != null)
                 VisitLiteral(literal, cte.NewType);
-            else
+            else {
+                // TODO: Mask if demotion?                
                 Visit(cte.Expression);
+            }
         }
 
         public void VisitNode (JSLiteral literal) {
@@ -737,6 +739,11 @@ namespace WasmSExprEmitter {
                 signSuffix = leftSign.GetValueOrDefault(true)
                     ? "_s"
                     : "_u";
+            } else if (
+                TypeUtil.IsPointer(leftType) || 
+                TypeUtil.IsPointer(rightType)
+            ) {
+                signSuffix = "_u";
             }
 
             var actualKeyword = string.Format(
@@ -860,6 +867,15 @@ namespace WasmSExprEmitter {
                 "f32.demote/f64",
                 (_) => {
                     Visit(dtfe.Expression);
+                }
+            );
+        }
+
+        public void VisitNode (JSFloatToDoubleExpression ftde) {
+            Formatter.WriteSExpr(
+                "f64.promote/f32",
+                (_) => {
+                    Visit(ftde.Expression);
                 }
             );
         }
@@ -1010,7 +1026,7 @@ namespace WasmSExprEmitter {
                 return;                
             }
 
-            Console.WriteLine("unimplemented cast {0} -> {1}", fromType, toType);
+            Console.Error.WriteLine("unimplemented cast {0} -> {1}", fromType, toType);
             Visit(value);
         }
 
@@ -1019,6 +1035,11 @@ namespace WasmSExprEmitter {
             var synthesized = new JSBinaryOperatorExpression(
                 JSOperator.Add, pae.Pointer, pae.Delta, pointerType
             );
+
+            if (pae.MutateInPlace)
+                synthesized = new JSBinaryOperatorExpression(
+                    JSOperator.Assignment, pae.Pointer, synthesized, pointerType
+                );
 
             Visit(synthesized);
         }
@@ -1045,7 +1066,9 @@ namespace WasmSExprEmitter {
             }
 
             if (offsetInBytes != null) {
-                return new JSPointerAddExpression(pointer, offsetInBytes, false);
+                var result = new JSPointerAddExpression(pointer, offsetInBytes, false);
+                // Console.WriteLine("Constructing pae {0} from {1} {2} {3}", result, pointer, offsetInElements, offsetInBytes);
+                return result;                
             } else {
                 return pointer;
             }

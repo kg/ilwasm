@@ -37,7 +37,10 @@ public static unsafe class Raytrace {
   }
 
   public static float fsin (float v) {
-    return (float)Math.Sin(v);
+    if (v < 0.5f)
+      return -16.0f * v * v + 8.0f * v;
+    else
+      return 16.0f * v * v - 24.0f * v + 8.0f;
   }
 
   public static float fsqrt (float v) {
@@ -314,13 +317,13 @@ public static class Program {
   public static void Main () {
     SetHeapSize(128 * 1024);
 
-    const int width = 64;
-    const int height = 64;
+    const int width = 12;
+    const int height = 12;
     const int heapOffset = 0;
 
     const int expectedSize = width * height * Raytrace.BytesPerPixel;
     // FIXME
-    const int expectedChecksum = 634397002;
+    const int expectedChecksum = 173095298;
 
     Invoke("init", width, height, heapOffset + Raytrace.TargaHeaderSize);
     Invoke("emitTargaHeader", heapOffset);
