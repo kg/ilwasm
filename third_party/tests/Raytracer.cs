@@ -47,12 +47,23 @@ public static unsafe class Raytrace {
     return (float)Math.Sqrt(v);
   }
 
+  // Convert a linear color value to a gamma-space byte.
+  // Square root approximates gamma-correct rendering.
+  public static int l2g (float v) {
+    return f2b(fsqrt(v));
+  }
+
   public static void storeColor (int x, int y, float r, float g, float b) {
+    // Invert y
+    y = height - y - 1;
+
     var index = (x + (y * width)) * BytesPerPixel;
     var ptr = &frame_buffer[index];
-    ptr[0] = (byte)f2b(r);
-    ptr[1] = (byte)f2b(g);
-    ptr[2] = (byte)f2b(b);
+
+    // Reversed r/g/b order
+    ptr[2] = (byte)l2g(r);
+    ptr[1] = (byte)l2g(g);
+    ptr[0] = (byte)l2g(b);
   }
 
   public static void vecStore (float x, float y, float z, Vec3f* ptr) {
@@ -315,15 +326,14 @@ public static unsafe class Raytrace {
 
 public static class Program {
   public static void Main () {
-    SetHeapSize(128 * 1024);
+    SetHeapSize(64 * 1024);
 
-    const int width = 12;
-    const int height = 12;
+    const int width = 16;
+    const int height = 16;
     const int heapOffset = 0;
 
     const int expectedSize = width * height * Raytrace.BytesPerPixel;
-    // FIXME
-    const int expectedChecksum = 173095298;
+    const int expectedChecksum = 420256993;
 
     Invoke("init", width, height, heapOffset + Raytrace.TargaHeaderSize);
     Invoke("emitTargaHeader", heapOffset);
