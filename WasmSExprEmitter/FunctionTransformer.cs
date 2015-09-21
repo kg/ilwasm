@@ -174,20 +174,24 @@ namespace WasmSExprEmitter {
                     if (!ExtractLiteral(arguments[2], out fileName))
                         throw new Exception("Expected fileName as arg2 of assertheapeqfile");
 
-                    var actualPath = Path.Combine("third_party", "test_data", fileName);
-                    if (!File.Exists(actualPath))
-                        throw new FileNotFoundException("Test expects result contained in nonexistent file", actualPath);
-
-                    var expectedBytes = File.ReadAllBytes(actualPath);
-                    if (count != expectedBytes.Length)
-                        throw new Exception("Size of expected data file '" + actualPath + "' does not match count argument " + count);
-
                     var sb = new StringBuilder();
-                    for (var i = 0; i < count; i++)
-                        sb.Append((char)expectedBytes[i]);
 
-                    var expected = sb.ToString();
-                    return new AssertHeapEq(offset, expected);
+                    var actualPath = Path.Combine("third_party", "test_data", fileName);
+                    if (!File.Exists(actualPath)) {
+                        Console.Error.WriteLine("// Test expects result contained in nonexistent file '{0}'", actualPath);
+                        
+                        for (var i = 0; i < count; i++)
+                            sb.Append((char)(i % 255));
+                    } else {
+                        var expectedBytes = File.ReadAllBytes(actualPath);
+                        if (count != expectedBytes.Length)
+                            Console.Error.WriteLine("// Size of expected data file '{0}' does not match count argument {1}", actualPath, count);
+
+                        for (var i = 0; i < count; i++)
+                            sb.Append((char)expectedBytes[i]);
+                    }
+
+                    return new AssertHeapEq(offset, sb.ToString());
                 }
 
                 case "System.Void Wasm.Heap::SetHeapSize(System.Int32)": {

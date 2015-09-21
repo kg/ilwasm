@@ -90,7 +90,14 @@ namespace Wasm {
             var assembly = Assembly.GetCallingAssembly();
             var exports = ExportTable.GetExports(assembly);
             var export = exports[exportedFunctionName];
-            var result = export.Invoke(null, values);
+            object result;
+
+            try {
+                result = export.Invoke(null, values);
+            } catch (Exception exc) {
+                throw new Exception(string.Format("Invoke('{0}', ...) failed ", exportedFunctionName), exc);
+            }
+
             var expectedText = Convert.ToString(expected);
             var actualText   = Convert.ToString(result);
 
@@ -212,7 +219,13 @@ namespace Wasm {
             var assembly = Assembly.GetCallingAssembly();
             var exports = ExportTable.GetExports(assembly);
             var export = exports[exportedFunctionName];
-            var result = export.Invoke(null, values);
+            object result;
+
+            try {
+                result = export.Invoke(null, values);
+            } catch (Exception exc) {
+                throw new Exception(string.Format("Invoke('{0}', ...) failed ", exportedFunctionName), exc);
+            }
 
             if (QuietMode && (export.ReturnType.FullName == "System.Void"))
                 return;
