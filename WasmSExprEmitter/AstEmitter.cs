@@ -855,6 +855,15 @@ namespace WasmSExprEmitter {
             );
         }
 
+        public void VisitNode (JSDoubleToFloatExpression dtfe) {
+            Formatter.WriteSExpr(
+                "f32.demote/f64",
+                (_) => {
+                    Visit(dtfe.Expression);
+                }
+            );
+        }
+
         public void VisitNode (JSTruncateExpression trunc) {
             // No-op. Only necessary in JS because of int ops producing floats
             EmitCast(

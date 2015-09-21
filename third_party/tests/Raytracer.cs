@@ -1,11 +1,13 @@
 // ncbray/wassembler demos/raytrace.wasm
 
 using System;
+using System.Runtime.InteropServices;
 using Wasm.Module;
 
 using static Wasm.Heap;
 using static Wasm.Test;
 
+[StructLayout(LayoutKind.Sequential, Pack=1)]
 public struct Vec3f {
   public float x, y, z;
 }
@@ -14,21 +16,14 @@ public static unsafe class Raytrace {
   public const int TargaHeaderSize = 18;
   public const int BytesPerPixel = 3;
 
-  public static int  width, height;
-  public static int* frame_buffer;
-  public static int  phase;
+  private static int   width, height;
+  private static byte* frame_buffer;
 
-  // TODO: Struct fields
-  public static Vec3f* 
-    pos, 
-    dir, 
-    light, 
-    half, 
-    color;
-  // TODO: Single Intersection { Vec3f, Vec3f } struct
-  public static Vec3f* 
-    intersection_pos,
-    intersection_normal;
+  // TODO: Implement ref/out and turn these into struct fields
+  private static Vec3f*
+    pos, dir,
+    light, half,
+    color, intersection_normal;
 
   // Convert [0.0, 1.0] to [0, 255].
   public static int f2b (float v) {
@@ -41,18 +36,20 @@ public static unsafe class Raytrace {
       return vi;
   }
 
+  public static float fsin (float v) {
+    return (float)Math.Sin(v);
+  }
+
   public static float fsqrt (float v) {
     return (float)Math.Sqrt(v);
   }
 
-  // Convert a linear color value to a gamma-space byte.
-  // Square root approximates gamma-correct rendering.
-  public static int l2g (float v) {
-    return f2b(fsqrt(v));
-  }
-
-  public static int packColor (float r, float g, float b) {
-    return l2g(b) << 16 | l2g(g) << 8 | l2g(r);
+  public static void storeColor (int x, int y, float r, float g, float b) {
+    var index = (x + (y * width)) * BytesPerPixel;
+    var ptr = &frame_buffer[index];
+    ptr[0] = (byte)f2b(r);
+    ptr[1] = (byte)f2b(g);
+    ptr[2] = (byte)f2b(b);
   }
 
   public static void vecStore (float x, float y, float z, Vec3f* ptr) {
@@ -120,6 +117,116 @@ public static unsafe class Raytrace {
     );
   }
 
+  public static bool intersect () {
+    var px = pos->x;
+    var py = pos->y;
+    var pz = pos->z;
+
+    var vx = dir->x;
+    var vy = dir->y;
+    var vz = dir->z;
+
+    // The sphere.
+    var radius = 4.0f;
+    var cx = 0.0f;
+    var cy = 0; // fsin(phase);
+    var cz = -6.0f;
+
+    // Calculate the position relative to the center of the sphere.
+    var ox = px - cx;
+    var oy = py - cy;
+    var oz = pz - cz;
+
+    var dot = vx * ox + vy * oy + vz * oz;
+
+    var partial = dot * dot + radius * radius - (ox * ox + oy * oy + oz * oz);
+    if (partial >= 0.0f) {
+      var d = -dot - fsqrt(partial);
+
+      if (d >= 0.0f) {
+        vecStore(px + vx * d - cx, py + vy * d - cy, pz + vz * d - cz, intersection_normal);
+        vecNormalize(intersection_normal);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  [Export]
+  public static void renderFrame () {
+    var w = width;
+    var h = height;
+
+    vecStore(20.0f, 20.0f, 15.0f, light);
+    vecNormalize(light);
+
+    var j = 0;
+    while (j < h) {
+      var y = 0.5f - (float)(j) / (float)(h);
+
+      var i = 0;
+      while (i < w) {
+        var x = (float)(i) / (float)(w) - 0.5f;
+        vecStore(x, y, 0.0f, pos);
+        vecStore(x, y, -0.5f, dir);
+        vecNormalize(dir);
+
+        // Compute the half vector;
+        vecScale(dir, -1.0f, half);
+        vecAdd(half, light, half);
+        vecNormalize(half);
+
+        // Light accumulation
+        var r = 0.0f;
+        var g = 0.0f;
+        var b = 0.0f;
+
+        // Surface diffuse.
+        var dr = 0.7f;
+        var dg = 0.7f;
+        var db = 0.7f;
+
+        if (intersect()) {
+          sampleEnv(intersection_normal, color);
+
+          const float ambientScale = 0.2f;
+          r = r + dr * color->x * ambientScale;
+          g = g + dg * color->y * ambientScale;
+          b = b + db * color->z * ambientScale;
+
+          var diffuse = vecNLDot(intersection_normal, light);
+          var specular = vecNLDot(intersection_normal, half);
+
+          // Take it to the 64th power, manually.
+          specular = specular * specular;
+          specular = specular * specular;
+          specular = specular * specular;
+          specular = specular * specular;
+          specular = specular * specular;
+          specular = specular * specular;
+
+          specular = specular * 0.6f;
+
+          r = r + dr * diffuse + specular;
+          g = g + dg * diffuse + specular;
+          b = b + db * diffuse + specular;
+        } else {
+          sampleEnv(dir, color);
+          r = color->x;
+          g = color->y;
+          b = color->z;
+        }
+
+        storeColor(i, j, r, g, b);
+
+        i = i + 1;
+      }
+
+      j = j + 1;
+    }
+  }
+
   [Export]
   private static void emitTargaHeader (int offset) {
       var ptr = &U8.Base[offset];
@@ -149,13 +256,11 @@ public static unsafe class Raytrace {
 
       // Width
       *ptr++ = (byte)width;
-      width = width >> 8;
-      *ptr++ = (byte)width;
+      *ptr++ = (byte)(width >> 8);
 
       // Height
       *ptr++ = (byte)height;
-      height = height >> 8;
-      *ptr++ = (byte)height;
+      *ptr++ = (byte)(height >> 8);
 
       // Bits per pixel
       *ptr++ = BytesPerPixel * 8;
@@ -165,15 +270,22 @@ public static unsafe class Raytrace {
   }
 
   [Export]
-  public static int checksum (int pPixels, int numBytes) {
-    var pixels = (int*)&(U8.Base[pPixels]);
-    var numPixels = numBytes / BytesPerPixel;
-    var lastPixel = &pixels[numPixels];
-    int sum = 0;
+  public static int checksum (int pBytes, int numBytes) {
+    var bytes = &(U8.Base[pBytes]);
+    var lastByte = &bytes[numBytes];
 
-    while (pixels < lastPixel) {
-      sum += *pixels;
-      pixels++;
+    int sum = 0;
+    int shift = 0;
+
+    while (bytes < lastByte) {
+      var val = (*bytes) << shift;
+      bytes++;
+
+      sum += val;
+
+      shift++;
+      if (shift >= 16)
+        shift = 0;
     }
 
     return sum;
@@ -183,7 +295,18 @@ public static unsafe class Raytrace {
   public static void init (int w, int h, int pFrameBuffer) {
     width = w;
     height = h;
-    frame_buffer = (int*)&(U8.Base[pFrameBuffer]);
+    frame_buffer = &U8.Base[pFrameBuffer];
+
+    var pScratch = pFrameBuffer + (width * height * BytesPerPixel) + 1024;
+    var scratch = (Vec3f*)&U8.Base[pScratch];
+
+    // FIXME
+    pos   = &scratch[0];
+    dir   = &scratch[1];
+    light = &scratch[2];
+    half  = &scratch[3];
+    color = &scratch[4];
+    intersection_normal = &scratch[5];
   }
 }
 
@@ -191,126 +314,18 @@ public static class Program {
   public static void Main () {
     SetHeapSize(128 * 1024);
 
-    const int width = 32;
-    const int height = 32;
+    const int width = 64;
+    const int height = 64;
     const int heapOffset = 0;
 
     const int expectedSize = width * height * Raytrace.BytesPerPixel;
     // FIXME
-    const int expectedChecksum = 1234567;
+    const int expectedChecksum = 634397002;
 
     Invoke("init", width, height, heapOffset + Raytrace.TargaHeaderSize);
     Invoke("emitTargaHeader", heapOffset);
-    // Invoke("renderFrame");
+    Invoke("renderFrame");
     AssertEq(expectedChecksum, "checksum", heapOffset + Raytrace.TargaHeaderSize, expectedSize);
     AssertHeapEqFile(heapOffset, Raytrace.TargaHeaderSize + expectedSize, "raytraced.tga");
   }
 }
-
-/*
-func intersect(pos i32, dir i32, intersection i32) i32 {
-  var px f32 = loadF32(pos);
-  var py f32 = loadF32(pos+4);
-  var pz f32 = loadF32(pos+8);
-
-  var vx f32 = loadF32(dir);
-  var vy f32 = loadF32(dir + 4);
-  var vz f32 = loadF32(dir + 8);
-
-
-  // The sphere.
-  var radius f32 = 4.0f;
-  var cx f32 = 0.0f;
-  var cy f32 = sinF32(loadF32(phase));
-  var cz f32 = -6.0f;
-
-  // Calculate the position relative to the center of the sphere.
-  var ox f32 = px - cx;
-  var oy f32 = py - cy;
-  var oz f32 = pz - cz;
-
-  var dot f32 = vx * ox + vy * oy + vz * oz;
-
-  var partial f32 = dot * dot + radius * radius - (ox * ox + oy * oy + oz * oz);
-  if (partial >= 0.0f) {
-    var d f32 = -dot - sqrtF32(partial);
-    if (d >= 0.0f) {
-      var normal i32 = intersection + 12;
-      vecStore(px + vx * d - cx, py + vy * d - cy, pz + vz * d - cz, normal);
-      vecNormalize(normal);
-      return 1;
-    }
-  }
-  return 0;
-}
-
-func renderFrame() i32 {
-  var w i32 = loadI32(width);
-  var h i32 = loadI32(height);
-  var buffer i32 = loadI32(frame_buffer);
-
-  vecStore(20.0f, 20.0f, 15.0f, light);
-  vecNormalize(light);
-
-  var j i32 = 0;
-  while (j < h) {
-    var y f32 = 0.5f - f32(j) / f32(h);
-    var i i32 = 0;
-    while (i < w) {
-      var x f32 = f32(i) / f32(w) - 0.5f;
-      vecStore(x, y, 0.0f, pos);
-      vecStore(x, y, -0.5f, dir);
-      vecNormalize(dir);
-
-      // Compute the half vector;
-      vecScale(dir, -1.0f, half);
-      vecAdd(half, light, half);
-      vecNormalize(half);
-
-      // Light accumulation
-      var r f32 = 0.0f;
-      var g f32 = 0.0f;
-      var b f32 = 0.0f;
-
-      // Surface diffuse.
-      var dr f32 = 0.7f;
-      var dg f32 = 0.7f;
-      var db f32 = 0.7f;
-
-      if (intersect(pos, dir, intersection)) {
-        sampleEnv(intersection + 12, color);
-        var ambientScale f32 = 0.2f;
-        r = r + dr * loadF32(color) * ambientScale;
-        g = g + dg * loadF32(color + 4) * ambientScale;
-        b = b + db * loadF32(color + 8) * ambientScale;
-
-        var diffuse f32 = vecNLDot(intersection + 12, light);
-        var specular f32 = vecNLDot(intersection + 12, half);
-        // Take it to the 64th power, manually.
-        specular = specular * specular;
-        specular = specular * specular;
-        specular = specular * specular;
-        specular = specular * specular;
-        specular = specular * specular;
-        specular = specular * specular;
-
-        specular = specular * 0.6f;
-
-        r = r + dr * diffuse + specular;
-        g = g + dg * diffuse + specular;
-        b = b + db * diffuse + specular;
-      } else {
-        sampleEnv(dir, color);
-        r = loadF32(color);
-        g = loadF32(color + 4);
-        b = loadF32(color + 8);
-      }
-      storeI32(buffer + (j * w + i) * 4, packColor(r, g, b, 1.0f));
-      i = i + 1;
-    }
-    j = j + 1;
-  }
-  return buffer;
-}
-
-*/

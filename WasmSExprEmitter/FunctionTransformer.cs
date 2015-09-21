@@ -111,6 +111,22 @@ namespace WasmSExprEmitter {
                         isConstantIfArgumentsAre: true
                     );
 
+                case "System.Double System.Math::Sin(System.Double)":
+                    return new AbstractSExpression(
+                        "f64.sin",
+                        typeSystem.Double,
+                        arguments,
+                        isConstantIfArgumentsAre: true
+                    );
+
+                case "System.Double System.Math::Cos(System.Double)":
+                    return new AbstractSExpression(
+                        "f64.cos",
+                        typeSystem.Double,
+                        arguments,
+                        isConstantIfArgumentsAre: true
+                    );
+
                 case "System.Double System.Math::Floor(System.Double)":
                     return new AbstractSExpression(
                         "f64.floor",
@@ -179,7 +195,7 @@ namespace WasmSExprEmitter {
                     var actualPath = Path.Combine("third_party", "test_data", fileName);
                     if (!File.Exists(actualPath)) {
                         Console.Error.WriteLine("// Test expects result contained in nonexistent file '{0}'", actualPath);
-                        
+
                         for (var i = 0; i < count; i++)
                             sb.Append((char)(i % 255));
                     } else {
