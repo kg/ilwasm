@@ -1013,6 +1013,9 @@ namespace WasmSExprEmitter {
                     );
                     Visit(synthesized);
                     return;
+                } else if (toType.FullName == "JSIL.Types.NativeInt") {
+                    Visit(value);
+                    return;
                 }
             } else if (toIntegral) {
                 Formatter.WriteRaw(
