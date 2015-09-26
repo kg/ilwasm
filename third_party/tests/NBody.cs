@@ -15,17 +15,17 @@ public static class Program {
     const double Scale = 1000000000000000;
 
     [Export]
-    public static double InitialEnergy { get; set; }
+    public static long InitialEnergy { get; set; }
     [Export]
-    public static double FinalEnergy { get; set; }
+    public static long FinalEnergy { get; set; }
 
     public static void Main () {
         SetHeapSize(8192);
 
         Invoke("Test");
 
-        const double initial = -169075163828525;
-        const double final   = -169016441264431;
+        const long initial = -169075163828525;
+        const long final   = -169016441264431;
 
         AssertEq(initial, "get_InitialEnergy");
         AssertEq(final,   "get_FinalEnergy");
@@ -36,12 +36,12 @@ public static class Program {
         const int n = 10000;
         NBodySystem.Initialize();
     
-        InitialEnergy = Math.Floor(NBodySystem.Energy() * Scale);
+        InitialEnergy = (long)Math.Floor(NBodySystem.Energy() * Scale);
       
         for (int i = 0; i < n; i++)
             NBodySystem.Advance(0.01);
       
-        FinalEnergy   = Math.Floor(NBodySystem.Energy() * Scale);
+        FinalEnergy   = (long)Math.Floor(NBodySystem.Energy() * Scale);
     }
 }
 
