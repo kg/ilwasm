@@ -284,28 +284,6 @@ public static unsafe class Raytrace {
   }
 
   [Export]
-  public static int checksum (int pBytes, int numBytes) {
-    var bytes = &(U8.Base[pBytes]);
-    var lastByte = &bytes[numBytes];
-
-    int sum = 0;
-    int shift = 0;
-
-    while (bytes < lastByte) {
-      var val = (*bytes) << shift;
-      bytes++;
-
-      sum += val;
-
-      shift++;
-      if (shift >= 16)
-        shift = 0;
-    }
-
-    return sum;
-  }
-
-  [Export]
   public static void init (int w, int h, int pFrameBuffer) {
     width = w;
     height = h;
@@ -333,12 +311,10 @@ public static class Program {
     const int heapOffset = 0;
 
     const int expectedSize = width * height * Raytrace.BytesPerPixel;
-    const int expectedChecksum = 420256993;
 
     Invoke("init", width, height, heapOffset + Raytrace.TargaHeaderSize);
     Invoke("emitTargaHeader", heapOffset);
     Invoke("renderFrame");
-    AssertEq(expectedChecksum, "checksum", heapOffset + Raytrace.TargaHeaderSize, expectedSize);
     AssertHeapEqFile(heapOffset, Raytrace.TargaHeaderSize + expectedSize, "raytraced.tga");
   }
 }
