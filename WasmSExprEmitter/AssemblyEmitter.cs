@@ -344,7 +344,6 @@ namespace WasmSExprEmitter {
             if (MethodTable.Count == 0)
                 return;
 
-            Formatter.Indent();
             Formatter.NewLine();
 
             Formatter.WriteRaw(";; function table");

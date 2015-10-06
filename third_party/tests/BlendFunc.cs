@@ -45,7 +45,13 @@ public static unsafe class Program {
         checkerboard(src,  numPixels, 0x0);
         checkerboard(dest, numPixels, 0xFF);
 
-        bf(src, dest, numPixels);
+        var rowSize = width * 3;
+
+        for (var y = 0; y < height; y++) {
+            bf(src, dest, width);
+            src += rowSize;
+            dest += rowSize;
+        }
     }
 
     [Export]
