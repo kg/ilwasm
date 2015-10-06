@@ -21,8 +21,8 @@ public static unsafe class Program {
             var b = (byte)((src[2] + dest[2]) / 2);
 
             dest[0] = r;
-            dest[1] = b;
-            dest[2] = g;
+            dest[1] = g;
+            dest[2] = b;
 
             src += 3;
             dest += 3;
