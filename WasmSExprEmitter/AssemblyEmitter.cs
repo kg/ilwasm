@@ -52,6 +52,8 @@ namespace WasmSExprEmitter {
 
         private readonly Dictionary<string, FieldTableEntry>  FieldTable  = new Dictionary<string, FieldTableEntry>();
         private readonly Dictionary<string, StringTableEntry> StringTable = new Dictionary<string, StringTableEntry>();
+        // FIXME: Ick
+        public  readonly List<MethodDefinition>               MethodTable = new List<MethodDefinition>();
 
         private int      AssignedHeapSize = 0;
         private bool     NeedStaticInit   = false;
@@ -104,6 +106,16 @@ namespace WasmSExprEmitter {
             }
 
             return result.Offset;
+        }
+
+        public int GetFunctionIndex (MethodDefinition md) {
+            var result = MethodTable.IndexOf(md);
+            if (result < 0) {
+                result = MethodTable.Count;
+                MethodTable.Add(md);
+            }
+
+            return result;
         }
 
         private void Switch (PrecedingType newType, bool neighborSpacing = false) {
@@ -328,6 +340,33 @@ namespace WasmSExprEmitter {
             Formatter.ConditionalNewLine();
         }
 
+        private void EmitFunctionTable () {
+            if (MethodTable.Count == 0)
+                return;
+
+            Formatter.Indent();
+            Formatter.NewLine();
+
+            Formatter.WriteRaw(";; function table");
+            Formatter.NewLine();
+
+            Formatter.WriteRaw("(table 0 ");
+            Formatter.Indent();
+            Formatter.NewLine();
+
+            foreach (var md in MethodTable) {
+                var name = WasmUtil.FormatMemberName(md);
+
+                Formatter.ConditionalNewLine();
+                Formatter.WriteRaw("${0}", name);
+            }
+
+            Formatter.Unindent();
+            Formatter.ConditionalNewLine();
+            Formatter.WriteRaw(")");
+            Formatter.NewLine();
+        }
+
         private void EmitCctors () {
             // HACK
             var identifier = (MemberIdentifier)Activator.CreateInstance(
@@ -415,6 +454,8 @@ namespace WasmSExprEmitter {
                 Formatter.WriteRaw(")");
                 Formatter.NewLine();
             }
+
+            EmitFunctionTable();
 
             EmitCctors();
 

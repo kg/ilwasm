@@ -7,8 +7,12 @@ using static Wasm.Heap;
 using static Wasm.Test;
 
 public static unsafe class Program {
+    public delegate void BlendFunc (byte* src, byte* dest, int count);
+
     public const int width = 16;
     public const int height = 16;
+    public const int numPixels = (width * height);
+    public const int numBytes  = numPixels * 3;
 
     public static void blend50 (byte* src, byte* dest, int count) {
         while (count-- > 0) {
@@ -37,20 +41,21 @@ public static unsafe class Program {
         }
     }
 
+    public static void rasterize (BlendFunc bf, byte* src, byte* dest) {
+        checkerboard(src,  numPixels, 0x0);
+        checkerboard(dest, numPixels, 0xFF);
+
+        bf(src, dest, numPixels);
+    }
+
     [Export]
     public static int test () {
-        var numPixels = (width * height);
-        var numBytes  = numPixels * 3;
-
         var offset = Targa.EmitHeader(0, width, height);
 
         byte* dest = &U8.Base[offset];
         byte* src  = &dest[numBytes];
 
-        checkerboard(src,  numPixels, 0x0);
-        checkerboard(dest, numPixels, 0xFF);
-
-        blend50(src, dest, numPixels);
+        rasterize(blend50, src, dest);
 
         return offset + numBytes;
     }

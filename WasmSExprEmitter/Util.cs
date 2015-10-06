@@ -27,6 +27,8 @@ namespace WasmSExprEmitter {
         public static string PickTypeKeyword (TypeReference type) {
             if (type.IsPointer)
                 return "i32";
+            else if (TypeUtil.IsDelegateType(type))
+                return "i32";
 
             // FIXME
             switch (type.FullName) {
@@ -118,6 +120,8 @@ namespace WasmSExprEmitter {
 
         public static int SizeOfType (TypeReference type) {
             if (type.IsPointer)
+                return 4;
+            else if (TypeUtil.IsDelegateType(type))
                 return 4;
 
             if (type.IsValueType && !type.IsPrimitive)

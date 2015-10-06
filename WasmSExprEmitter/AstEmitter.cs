@@ -822,9 +822,64 @@ namespace WasmSExprEmitter {
             );
         }
 
+        public void VisitNode (JSDelegateInvocationExpression die) {
+            var manyArgs = die.Arguments.Count > 2;
+
+            Formatter.WriteSExpr("call_indirect", (_) => {
+                // HACK: For some reason we need a function table number (not a name!)
+                Formatter.WriteRaw("0 ");
+
+                Visit(die.Delegate);
+                Formatter.WriteRaw(" ");
+                EmitArgumentList(_, die.Arguments, manyArgs);
+            }, lineBreakInside: manyArgs);
+        }
+
+        // Why is this necessary???
+        private T UnwrapDeferred<T> (JSExpression e) 
+            where T : JSExpression
+        {
+            var de = e as JSDeferredExpression;
+            if (de == null)
+                throw new Exception("Expected JSDeferredExpression, got " + e);
+            
+            var result = de.InnerExpression as T;
+            if (result == null)
+                throw new Exception("Expected DeferredExpression to contain " + typeof(T).Name + " but was " + de.InnerExpression);
+
+            return result;
+        }
+
+        private void VisitFakeMethod (JSInvocationExpression ie, JSFakeMethod fakeMethod) {
+            if (TypeUtil.IsDelegateType(fakeMethod.ReturnType) && fakeMethod.Name == "New") {
+                var type = (JSType)ie.Arguments[0];
+                // FIXME: What the heck is in arg1????
+                var method = UnwrapDeferred<JSMethod>(ie.Arguments[2]);
+
+                var methodDef = method.Reference.Resolve();
+                var memberName = WasmUtil.FormatMemberName(methodDef);
+
+                Formatter.WriteRaw("(i32.const {0} (; {1} ;))", AssemblyEmitter.GetFunctionIndex(methodDef), methodDef.FullName);
+                return;
+            }
+
+            Console.WriteLine("Can't translate fake method {0}", ie);
+            Formatter.WriteSExpr("untranslatable.call");
+            return;
+        }
+
         public void VisitNode (JSInvocationExpression ie) {
             var jsm = ie.JSMethod;
             if (jsm == null) {
+                var d = ie.Method as JSDotExpression;
+                if (d != null) {
+                    var m = d.Member as JSFakeMethod;
+                    if (m != null) {
+                        VisitFakeMethod(ie, m);
+                        return;
+                    }
+                }
+
                 Console.WriteLine("Can't translate non-JSMethod {0}", ie);
                 Formatter.WriteSExpr("untranslatable.call");
                 return;
