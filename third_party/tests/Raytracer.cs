@@ -1,3 +1,5 @@
+//#use lib/Targa.cs
+
 // ncbray/wassembler demos/raytrace.wasm
 
 using System;
@@ -242,48 +244,6 @@ public static unsafe class Raytrace {
   }
 
   [Export]
-  private static void emitTargaHeader (int offset) {
-      var ptr = &U8.Base[offset];
-
-      // ID length
-      *ptr++ = 0;
-
-      // Colormap type - none
-      *ptr++ = 0;
-
-      // Image type - uncompressed truecolor
-      *ptr++ = 2;
-
-      // Colormap specification
-      for (var j = 0; j < 5; j++)
-        *ptr++ = 0;
-
-      // Image specification
-
-      // X origin
-      *ptr++ = 0;
-      *ptr++ = 0;
-
-      // Y origin
-      *ptr++ = 0;
-      *ptr++ = 0;
-
-      // Width
-      *ptr++ = (byte)width;
-      *ptr++ = (byte)(width >> 8);
-
-      // Height
-      *ptr++ = (byte)height;
-      *ptr++ = (byte)(height >> 8);
-
-      // Bits per pixel
-      *ptr++ = BytesPerPixel * 8;
-
-      // Image descriptor [0..3] = alpha depth, [4..5] direction
-      *ptr++ = 0;
-  }
-
-  [Export]
   public static void init (int w, int h, int pFrameBuffer) {
     width = w;
     height = h;
@@ -313,7 +273,7 @@ public static class Program {
     const int expectedSize = width * height * Raytrace.BytesPerPixel;
 
     Invoke("init", width, height, heapOffset + Raytrace.TargaHeaderSize);
-    Invoke("emitTargaHeader", heapOffset);
+    AssertEq(18, "emitTargaHeader", heapOffset, width, height);
     Invoke("renderFrame");
     AssertHeapEqFile(heapOffset, Raytrace.TargaHeaderSize + expectedSize, "raytraced.tga");
   }

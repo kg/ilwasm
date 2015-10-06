@@ -36,6 +36,7 @@ namespace WasmSExprEmitter {
                 case "System.Boolean":
                 case "System.Int32":
                 case "System.UInt32":
+                case "JSIL.Types.NativeInt":
                     return "i32";
 
                 case "System.Int64":
