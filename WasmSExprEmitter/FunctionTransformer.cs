@@ -150,50 +150,6 @@ namespace WasmSExprEmitter {
                     return new AssertReturn(expected, methodName, invokeArguments);
                 }
 
-                case "System.Void Wasm.Test::AssertHeapEq(System.Int32,System.String)": {
-                    int offset;
-                    if (!ExtractLiteral(arguments[0], out offset))
-                        throw new Exception("Expected offset as arg0 of assertheapeq");
-
-                    string expected;
-                    if (!ExtractLiteral(arguments[1], out expected))
-                        throw new Exception("Expected expected as arg1 of assertheapeq");
-                    return new AssertHeapEq(offset, expected);
-                }
-
-                case "System.Void Wasm.Test::AssertHeapEqFile(System.Int32,System.Int32,System.String)": {
-                    int offset;
-                    if (!ExtractLiteral(arguments[0], out offset))
-                        throw new Exception("Expected offset as arg0 of assertheapeqfile");
-
-                    int count;
-                    if (!ExtractLiteral(arguments[1], out count))
-                        throw new Exception("Expected count as arg1 of assertheapeqfile");
-
-                    string fileName;
-                    if (!ExtractLiteral(arguments[2], out fileName))
-                        throw new Exception("Expected fileName as arg2 of assertheapeqfile");
-
-                    var sb = new StringBuilder();
-
-                    var actualPath = Path.Combine("third_party", "test_data", fileName);
-                    if (!File.Exists(actualPath)) {
-                        Console.Error.WriteLine("// Test expects result contained in nonexistent file '{0}'", actualPath);
-
-                        for (var i = 0; i < count; i++)
-                            sb.Append((char)(i % 255));
-                    } else {
-                        var expectedBytes = File.ReadAllBytes(actualPath);
-                        if (count != expectedBytes.Length)
-                            Console.Error.WriteLine("// Size of expected data file '{0}' does not match count argument {1}", actualPath, count);
-
-                        for (var i = 0; i < count; i++)
-                            sb.Append((char)expectedBytes[i]);
-                    }
-
-                    return new AssertHeapEq(offset, sb.ToString());
-                }
-
                 case "System.Void Wasm.Heap::SetHeapSize(System.Int32)": {
                     var td = caller.DeclaringType.Resolve();
                     var hs = WasmUtil.HeapSizes;
@@ -273,6 +229,15 @@ namespace WasmSExprEmitter {
                 case "System.Int32* Wasm.HeapI32::get_Base()":
                 case "System.Byte* Wasm.HeapU8::get_Base()": {
                     return JSLiteral.DefaultValue(method.ReturnType);
+                }
+
+                case "System.Void Wasm.Heap::SetStdout(System.String)": {
+                    // FIXME: Store the filename somewhere
+                    return new JSNullExpression();
+                }
+
+                case "System.Void Wasm.Heap::Write(System.Int32,System.Int32)": {
+                    return new StdoutWrite(arguments[0], arguments[1]);
                 }
             }
 

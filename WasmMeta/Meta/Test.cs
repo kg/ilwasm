@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using System.IO;
 using JSIL.Meta;
 
 namespace Wasm {
@@ -12,7 +11,6 @@ namespace Wasm {
     public static class Test {
         public static readonly bool QuietMode;
 
-        private static Stream Stdout;
         private static bool HeaderPrinted;
 
         static Test () {
@@ -122,28 +120,6 @@ namespace Wasm {
                 expectedText,
                 actualText
             );
-        }
-
-        private static IEnumerable<byte> GetHeapRange (int offset, int count) {
-            var indices = Enumerable.Range(0, count);
-            var bytes = (from i in indices select Wasm.Heap.U8[offset, i]);
-            return bytes;
-        }
-
-        public static void SetStdout (string filename) {
-            if (Stdout != null)
-                throw new Exception("Stdout already open");
-
-            // FIXME: Leak
-            Stdout = File.OpenWrite(Path.Combine("output", filename));
-        }
-
-        public static void Write (int offset, int count) {
-            if (Stdout == null)
-                throw new Exception("No stdout open");
-
-            var bytes = GetHeapRange(offset, count).ToArray();
-            Stdout.Write(bytes, 0, count);
         }
 
         public static void Invoke (string exportedFunctionName, params object[] values) {

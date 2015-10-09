@@ -5,7 +5,7 @@ using static Wasm.Heap;
 using static Wasm.Test;
 
 public static partial class Stdout {
-    private static int Length;
+    public static int Length;
 
     public static void putchar (int ch) {
         U8[HeapBase, Length++] = (byte)ch;

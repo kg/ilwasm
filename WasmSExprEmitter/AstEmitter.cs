@@ -967,12 +967,12 @@ namespace WasmSExprEmitter {
             Formatter.NewLine();
         }
 
-        public void VisitNode (AssertHeapEq asheq) {
-            Formatter.WriteRaw("(assert_heap_eq {0} \"", asheq.Offset);
-            WasmSExprAssemblyEmitter.EmitStringLiteralContents(
-                Formatter.Output, asheq.Expected
-            );
-            Formatter.WriteRaw("\")");
+        public void VisitNode (StdoutWrite sw) {
+            Formatter.WriteRaw("(call_import $__write ");
+            Visit(sw.Offset);
+            Formatter.Space();
+            Visit(sw.Count);
+            Formatter.WriteRaw(")");
             Formatter.NewLine();
         }
 

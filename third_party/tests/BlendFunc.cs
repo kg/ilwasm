@@ -63,6 +63,9 @@ public static unsafe class Program {
 
         rasterize(blend50, src, dest);
 
+        SetStdout("blendfunc.tga");
+        Write(offset, numBytes);
+
         return offset + numBytes;
     }
 
@@ -71,8 +74,5 @@ public static unsafe class Program {
 
         const int expectedLength = 786;
         AssertReturn(expectedLength, "test");
-
-        SetStdout("blendfunc.tga");
-        Write(0, expectedLength);
     }
 }

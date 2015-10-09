@@ -29,7 +29,11 @@ public static class Program {
             }
         }
 
-        return heapOffset + (width * height * bytesPerPixel);
+        const int length = (width * height * bytesPerPixel);
+        SetStdout("gradient.tga");
+        Write(heapOffset, length);
+
+        return heapOffset + length;
     }
 
     public static void Main () {
@@ -37,7 +41,5 @@ public static class Program {
 
         const int expectedLength = 210;
         AssertReturn(expectedLength, "generateGradient", 0);
-        SetStdout("gradient.tga");
-        Write(0, expectedLength);
     }
 }

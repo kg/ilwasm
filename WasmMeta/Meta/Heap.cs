@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using JSIL.Meta;
 
 namespace Wasm {
@@ -26,6 +27,9 @@ namespace Wasm {
             }
         }
 
+        // FIXME: Put this somewhere else
+        private static Stream Stdout;
+
         private static State Allocated;
         public static readonly HeapU8  U8  = new HeapU8();
         public static readonly HeapI32 I32 = new HeapI32();
@@ -42,6 +46,29 @@ namespace Wasm {
                 throw new Exception(string.Format("Attempted to access offset {0} but heap size is {1}", desiredOffset, Allocated.Buffer.Length));
 
             return Allocated.pBuffer;
+        }
+
+        private static IEnumerable<byte> GetHeapRange (int offset, int count) {
+            var indices = Enumerable.Range(0, count);
+            var bytes = (from i in indices select U8[offset, i]);
+            return bytes;
+        }
+
+        public static void SetStdout (string filename) {
+            if (Stdout != null)
+                throw new Exception("Stdout already open");
+
+            Directory.CreateDirectory(Path.Combine("output", "cs-data"));
+            // FIXME: Leak
+            Stdout = File.OpenWrite(Path.Combine("output", "cs-data", filename));
+        }
+
+        public static void Write (int offset, int count) {
+            if (Stdout == null)
+                throw new Exception("No stdout open");
+
+            var bytes = GetHeapRange(offset, count).ToArray();
+            Stdout.Write(bytes, 0, count);
         }
     }
 

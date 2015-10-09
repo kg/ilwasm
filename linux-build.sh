@@ -6,7 +6,7 @@ JSILDIR=$ILWASMDIR/third_party/JSIL
 
 pushd $ILWASMDIR
 
-rm output/*
+rm -rf output
 
 echo // Building ilwasm
 xbuild WasmSExprEmitter.sln /v:m

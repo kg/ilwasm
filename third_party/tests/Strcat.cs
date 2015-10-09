@@ -19,14 +19,14 @@ public static class Program {
         offset = strcat(offset, ", ");
         offset = strcat(offset, "world");
         offset = strcat(offset, "!");
+
+        SetStdout("strcat.log");
+        Write(0, offset);
     }
 
     public static void Main () {
         SetHeapSize(1024);
 
         Invoke("buildString");
-
-        SetStdout("strcat.log");
-        Write(0, 14);
     }
 }

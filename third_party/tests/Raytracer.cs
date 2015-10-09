@@ -241,6 +241,11 @@ public static unsafe class Raytrace {
 
       j = j + 1;
     }
+
+    int expectedSize = width * height * BytesPerPixel;
+
+    SetStdout("raytraced.tga");
+    Write(0, TargaHeaderSize + expectedSize);
   }
 
   [Export]
@@ -270,12 +275,8 @@ public static class Program {
     const int height = 16;
     const int heapOffset = 0;
 
-    const int expectedSize = width * height * Raytrace.BytesPerPixel;
-
     Invoke("init", width, height, heapOffset + Raytrace.TargaHeaderSize);
     AssertReturn(18, "emitTargaHeader", heapOffset, width, height);
     Invoke("renderFrame");
-    SetStdout("raytraced.tga");
-    Write(heapOffset, Raytrace.TargaHeaderSize + expectedSize);
   }
 }

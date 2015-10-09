@@ -206,17 +206,23 @@ namespace WasmSExprEmitter {
         }
     }
 
-    public class AssertHeapEq : SExpression {
-        public readonly int Offset;
-        public readonly string Expected;
-
-        public AssertHeapEq (int offset, string expected)
+    public class StdoutWrite : SExpression {
+        public StdoutWrite (JSExpression offset, JSExpression count)
             : base (
-                "assert_heap_eq"
+                "unimplemented.stdoutwrite", offset, count
             ) {
+        }
 
-            Offset = offset;
-            Expected = expected;
+        public JSExpression Offset {
+            get {
+                return Values[0];
+            }
+        }
+
+        public JSExpression Count {
+            get {
+                return Values[1];
+            }
         }
 
         public override TypeReference GetActualType (TypeSystem typeSystem) {
