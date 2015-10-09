@@ -177,12 +177,12 @@ namespace WasmSExprEmitter {
         }
     }
 
-    public class AssertEq : SExpression {
+    public class AssertReturn : SExpression {
         public readonly string ExportedFunctionName;
 
-        public AssertEq (JSExpression expected, string exportedFunctionName, JSExpression[] arguments)
+        public AssertReturn (JSExpression expected, string exportedFunctionName, JSExpression[] arguments)
             : base (
-                "assert_eq", 
+                "assert_return", 
                 (new[] { expected }).Concat(arguments).ToArray()
             ) {
 

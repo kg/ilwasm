@@ -56,6 +56,7 @@ def compile_cs(fileName):
     os.path.join("WasmMeta", "bin", "WasmMeta.dll"),
     compiledPath
   )
+
   exitCode = subprocess.call(commandStr, shell=True)
 
   if exitCode != 0:
@@ -98,9 +99,7 @@ def run_csharp(compiledPath):
   return exitCode
 
 def run_wasm(wasmPath):
-  interpreterPath = os.path.realpath(os.path.join("..", "wasm-spec", "ml-proto", "src", "_build", "main.native"))
-  if not os.path.exists(interpreterPath):
-    interpreterPath = os.path.realpath(os.path.join("..", "wasm-spec", "ml-proto", "src", "_build", "host", "main.native"))
+  interpreterPath = os.path.realpath(os.path.join("..", "wasm-spec", "ml-proto", "_build", "host", "main.d.byte"))
 
   commandStr = ("%s %s") % (interpreterPath, wasmPath)
   exitCode = subprocess.call(commandStr, shell=True)

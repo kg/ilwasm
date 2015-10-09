@@ -956,8 +956,8 @@ namespace WasmSExprEmitter {
             );
         }
 
-        public void VisitNode (AssertEq aseq) {
-            Formatter.WriteRaw("(assert_eq (invoke ");
+        public void VisitNode (AssertReturn aseq) {
+            Formatter.WriteRaw("(assert_return (invoke ");
             Formatter.Value(aseq.ExportedFunctionName);
             Formatter.Space();
             EmitArgumentList(Formatter, aseq.Arguments, false);

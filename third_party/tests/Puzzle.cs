@@ -1,4 +1,5 @@
 //#use lib/Stdout.cs
+//#stdout puzzle.log
 
 // see llvm_license.txt
 // https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/Benchmarks/BenchmarkGame/puzzle.c
@@ -112,8 +113,8 @@ public static unsafe class Program {
 
         const int expectedLength = 219;
 
-        AssertEq(expectedLength, "get_stdout_length");
-        AssertHeapEqFile(Stdout.HeapBase, expectedLength, "puzzle.log");
+        AssertReturn(expectedLength, "get_stdout_length");
+        Write(Stdout.HeapBase, expectedLength);
     }
 
 }

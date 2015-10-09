@@ -64,26 +64,26 @@ public static class Program {
     }
 
     public static void Main () {
-        AssertEq(5,    "getStringLength", 1);
-        AssertEq(6,    "getStringLength", 2);
+        AssertReturn(5,    "getStringLength", 1);
+        AssertReturn(6,    "getStringLength", 2);
 
-        AssertEq('h',  "readStringChar",  1, 0);
-        AssertEq('l',  "readStringChar",  1, 2);
+        AssertReturn('h',  "readStringChar",  1, 0);
+        AssertReturn('l',  "readStringChar",  1, 2);
 
-        AssertEq('w',  "readStringChar",  2, 0);
-        AssertEq('l',  "readStringChar",  2, 3);
-        AssertEq('!',  "readStringChar",  2, 5);
+        AssertReturn('w',  "readStringChar",  2, 0);
+        AssertReturn('l',  "readStringChar",  2, 3);
+        AssertReturn('!',  "readStringChar",  2, 5);
 
-        AssertEq(0,    "compareStrings",  0, 0);
-        AssertEq(-1,   "compareStrings",  0, 1);
-        AssertEq(1,    "compareStrings",  2, 0);
-        AssertEq(0,    "compareStrings",  1, 1);
-        AssertEq(-1,   "compareStrings",  1, 2);
-        AssertEq(1,    "compareStrings",  2, 1);
+        AssertReturn(0,    "compareStrings",  0, 0);
+        AssertReturn(-1,   "compareStrings",  0, 1);
+        AssertReturn(1,    "compareStrings",  2, 0);
+        AssertReturn(0,    "compareStrings",  1, 1);
+        AssertReturn(-1,   "compareStrings",  1, 2);
+        AssertReturn(1,    "compareStrings",  2, 1);
 
-        AssertEq('\0',   "readStringChar",  3, 0);
-        AssertEq('\r',   "readStringChar",  3, 1);
-        AssertEq('\n',   "readStringChar",  3, 2);
-        AssertEq('\x07', "readStringChar",  3, 3);
+        AssertReturn('\0',   "readStringChar",  3, 0);
+        AssertReturn('\r',   "readStringChar",  3, 1);
+        AssertReturn('\n',   "readStringChar",  3, 2);
+        AssertReturn('\x07', "readStringChar",  3, 3);
     }
 }

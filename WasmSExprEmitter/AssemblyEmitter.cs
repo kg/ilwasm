@@ -349,7 +349,7 @@ namespace WasmSExprEmitter {
             Formatter.WriteRaw(";; function table");
             Formatter.NewLine();
 
-            Formatter.WriteRaw("(table 0 ");
+            Formatter.WriteRaw("(table ");
             Formatter.Indent();
             Formatter.NewLine();
 

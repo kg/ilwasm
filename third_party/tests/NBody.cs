@@ -27,8 +27,8 @@ public static class Program {
         const long initial = -169075163828525;
         const long final   = -169016441264431;
 
-        AssertEq(initial, "get_InitialEnergy");
-        AssertEq(final,   "get_FinalEnergy");
+        AssertReturn(initial, "get_InitialEnergy");
+        AssertReturn(final,   "get_FinalEnergy");
     }
 
     [Export]

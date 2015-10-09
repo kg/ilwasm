@@ -12,6 +12,7 @@ namespace Wasm {
     public static class Test {
         public static readonly bool QuietMode;
 
+        private static Stream Stdout;
         private static bool HeaderPrinted;
 
         static Test () {
@@ -86,7 +87,7 @@ namespace Wasm {
             Console.WriteLine("// {0}", testName);
         }
 
-        public static void AssertEq (object expected, string exportedFunctionName, params object[] values) {
+        public static void AssertReturn (object expected, string exportedFunctionName, params object[] values) {
             var assembly = Assembly.GetCallingAssembly();
             var exports = ExportTable.GetExports(assembly);
             var export = exports[exportedFunctionName];
@@ -123,96 +124,26 @@ namespace Wasm {
             );
         }
 
-        private static IEnumerable<byte> RawCharsToBytes (IEnumerable<char> chars) {
-            return (from ch in chars select (byte)ch);
-        }
-
-        private static string FormatBytestring (IEnumerable<byte> bytes) {
-            var sb = new StringBuilder();
-            foreach (var b in bytes) {
-                if ((b < 32) || (b >= 127)) {
-                    sb.AppendFormat("\\x{0:X2}", (int)b);
-                } else {
-                    sb.Append((char)b);
-                }
-            }
-
-            return sb.ToString();
-        }
-
         private static IEnumerable<byte> GetHeapRange (int offset, int count) {
             var indices = Enumerable.Range(0, count);
             var bytes = (from i in indices select Wasm.Heap.U8[offset, i]);
             return bytes;
         }
 
-        private static string FormatHeapRange (int offset, int count) {
-            return FormatBytestring(GetHeapRange(offset, count));
+        public static void SetStdout (string filename) {
+            if (Stdout != null)
+                throw new Exception("Stdout already open");
+
+            // FIXME: Leak
+            Stdout = File.OpenWrite(Path.Combine("output", filename));
         }
 
-        private static bool TestHeapEq (int offset, IEnumerable<byte> expected) {
-            int i = 0;
-            foreach (var expectedByte in expected) {
-                byte b = Wasm.Heap.U8[offset, i];
-                if (b != expectedByte)
-                    return false;
+        public static void Write (int offset, int count) {
+            if (Stdout == null)
+                throw new Exception("No stdout open");
 
-                i++;
-            }
-
-            return true;
-        }
-
-        public static void AssertHeapEq (int offset, string expected) {
-            var assembly = Assembly.GetCallingAssembly();
-            var expectedBytes = RawCharsToBytes(expected);
-
-            var passed = TestHeapEq(offset, expectedBytes);
-
-            if (QuietMode && passed)
-                return;
-
-            PrintHeader(assembly);
-            Console.WriteLine(
-                "(assert_heap_eq {1} \"{2}\"){0}" +
-                "-> {3} \"{2}\" == \"{4}\"",
-                Environment.NewLine,
-                offset, FormatBytestring(expectedBytes),
-                passed
-                    ? "pass"
-                    : "fail",
-                FormatHeapRange(offset, expectedBytes.Count())
-            );
-        }
-
-        public static void AssertHeapEqFile (int offset, int count, string expectedFileName) {
-            var assembly = Assembly.GetCallingAssembly();
-
-            var actualBytes = GetHeapRange(offset, count);
-            var actualFileName = Path.Combine("output", expectedFileName);
-            File.WriteAllBytes(actualFileName, actualBytes.ToArray());
-
-            var fullExpectedFileName = Path.Combine("third_party", "test_data", expectedFileName);
-
-            var expectedBytes = File.ReadAllBytes(fullExpectedFileName);
-
-            var passed = TestHeapEq(offset, expectedBytes) && (count == expectedBytes.Length);
-
-            if (QuietMode && passed)
-                return;
-
-            PrintHeader(assembly);
-            Console.WriteLine(
-                "(assert_heap_eq {1} '{2}'){0}" +
-                "-> {3} '{4}' == '{5}'",
-                Environment.NewLine,
-                offset, expectedFileName,
-                passed
-                    ? "pass"
-                    : "fail",
-                fullExpectedFileName,
-                actualFileName
-            );
+            var bytes = GetHeapRange(offset, count).ToArray();
+            Stdout.Write(bytes, 0, count);
         }
 
         public static void Invoke (string exportedFunctionName, params object[] values) {

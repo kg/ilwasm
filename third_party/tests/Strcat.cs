@@ -26,6 +26,7 @@ public static class Program {
 
         Invoke("buildString");
 
-        AssertHeapEq(0, "hello, world!\0");
+        SetStdout("strcat.log");
+        Write(0, 14);
     }
 }

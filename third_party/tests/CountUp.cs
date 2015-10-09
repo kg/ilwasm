@@ -22,10 +22,10 @@ public static class Program {
         Invoke("countUp", 0, 32);
         Invoke("countUp", 16, 4);
 
-        AssertEq(0,  "readI32", 0, 0 );
-        AssertEq(2,  "readI32", 0, 2 );
-        AssertEq(31, "readI32", 0, 31);
-        AssertEq(0,  "readI32", 16, 0 );
-        AssertEq(3,  "readI32", 16, 3 );
+        AssertReturn(0,  "readI32", 0, 0 );
+        AssertReturn(2,  "readI32", 0, 2 );
+        AssertReturn(31, "readI32", 0, 31);
+        AssertReturn(0,  "readI32", 16, 0 );
+        AssertReturn(3,  "readI32", 16, 3 );
     }
 }

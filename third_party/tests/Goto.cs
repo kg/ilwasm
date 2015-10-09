@@ -64,23 +64,23 @@ public static class Program {
 
         Invoke("gotos");
 
-        AssertEq(16, "get_ResultCount");
-        AssertEq(A,  "getResult", 0);
-        AssertEq(C,  "getResult", 1);
-        AssertEq(C,  "getResult", 2);
-        AssertEq(C,  "getResult", 3);
-        AssertEq(C,  "getResult", 4);
-        AssertEq(C,  "getResult", 5);
-        AssertEq(C,  "getResult", 6);
-        AssertEq(C,  "getResult", 7);
-        AssertEq(A,  "getResult", 8);
-        AssertEq(C,  "getResult", 9);
-        AssertEq(C,  "getResult", 10);
-        AssertEq(C,  "getResult", 11);
-        AssertEq(C,  "getResult", 12);
-        AssertEq(C,  "getResult", 13);
-        AssertEq(C,  "getResult", 14);
-        AssertEq(C,  "getResult", 15);
-        AssertEq(0,  "getResult", 16);
+        AssertReturn(16, "get_ResultCount");
+        AssertReturn(A,  "getResult", 0);
+        AssertReturn(C,  "getResult", 1);
+        AssertReturn(C,  "getResult", 2);
+        AssertReturn(C,  "getResult", 3);
+        AssertReturn(C,  "getResult", 4);
+        AssertReturn(C,  "getResult", 5);
+        AssertReturn(C,  "getResult", 6);
+        AssertReturn(C,  "getResult", 7);
+        AssertReturn(A,  "getResult", 8);
+        AssertReturn(C,  "getResult", 9);
+        AssertReturn(C,  "getResult", 10);
+        AssertReturn(C,  "getResult", 11);
+        AssertReturn(C,  "getResult", 12);
+        AssertReturn(C,  "getResult", 13);
+        AssertReturn(C,  "getResult", 14);
+        AssertReturn(C,  "getResult", 15);
+        AssertReturn(0,  "getResult", 16);
    }
 }

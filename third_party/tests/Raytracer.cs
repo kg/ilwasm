@@ -273,8 +273,9 @@ public static class Program {
     const int expectedSize = width * height * Raytrace.BytesPerPixel;
 
     Invoke("init", width, height, heapOffset + Raytrace.TargaHeaderSize);
-    AssertEq(18, "emitTargaHeader", heapOffset, width, height);
+    AssertReturn(18, "emitTargaHeader", heapOffset, width, height);
     Invoke("renderFrame");
-    AssertHeapEqFile(heapOffset, Raytrace.TargaHeaderSize + expectedSize, "raytraced.tga");
+    SetStdout("raytraced.tga");
+    Write(heapOffset, Raytrace.TargaHeaderSize + expectedSize);
   }
 }

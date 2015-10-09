@@ -70,7 +70,9 @@ public static unsafe class Program {
         SetHeapSize(8192);
 
         const int expectedLength = 786;
-        AssertEq(expectedLength, "test");
-        AssertHeapEqFile(0, expectedLength, "blendfunc.tga");
+        AssertReturn(expectedLength, "test");
+
+        SetStdout("blendfunc.tga");
+        Write(0, expectedLength);
     }
 }

@@ -140,14 +140,14 @@ namespace WasmSExprEmitter {
                     );
                 }
 
-                case "System.Void Wasm.Test::AssertEq(System.Object,System.String,System.Object[])": {
+                case "System.Void Wasm.Test::AssertReturn(System.Object,System.String,System.Object[])": {
                     var expected = arguments[0];
                     string methodName;
                     if (!ExtractLiteral(arguments[1], out methodName))
-                        throw new Exception("Expected export name as arg1 of asserteq");
+                        throw new Exception("Expected export name as arg1 of assertreturn");
                     var invokeArguments = UnpackArgsArray(arguments[2]);
 
-                    return new AssertEq(expected, methodName, invokeArguments);
+                    return new AssertReturn(expected, methodName, invokeArguments);
                 }
 
                 case "System.Void Wasm.Test::AssertHeapEq(System.Int32,System.String)": {

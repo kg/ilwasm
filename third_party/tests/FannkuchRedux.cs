@@ -133,7 +133,7 @@ public static class Program {
         int n = 7;
         Invoke("fannkuch", n);
 
-        AssertEq(228, "get_Sum");
-        AssertEq(16,  "get_MaxFlips");
+        AssertReturn(228, "get_Sum");
+        AssertReturn(16,  "get_MaxFlips");
     }
 }

@@ -61,15 +61,15 @@ public static class Program {
 
         Invoke("sieve", 24);
 
-        AssertEq(9,  "get_ResultCount");
-        AssertEq(2,  "getResult", 0);
-        AssertEq(3,  "getResult", 1);
-        AssertEq(5,  "getResult", 2);
-        AssertEq(7,  "getResult", 3);
-        AssertEq(11, "getResult", 4);
-        AssertEq(13, "getResult", 5);
-        AssertEq(17, "getResult", 6);
-        AssertEq(19, "getResult", 7);
-        AssertEq(23, "getResult", 8);
+        AssertReturn(9,  "get_ResultCount");
+        AssertReturn(2,  "getResult", 0);
+        AssertReturn(3,  "getResult", 1);
+        AssertReturn(5,  "getResult", 2);
+        AssertReturn(7,  "getResult", 3);
+        AssertReturn(11, "getResult", 4);
+        AssertReturn(13, "getResult", 5);
+        AssertReturn(17, "getResult", 6);
+        AssertReturn(19, "getResult", 7);
+        AssertReturn(23, "getResult", 8);
     }
 }
