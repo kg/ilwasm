@@ -434,8 +434,8 @@ namespace WasmSExprEmitter {
             int totalMemorySize = heapSize + AssignedHeapSize;
 
             if (totalMemorySize > 0) {
-                Formatter.WriteRaw("(import $__write \"stdio\" \"write\" (param i32 i32))");
                 Formatter.NewLine();
+                Formatter.WriteRaw("(import $__write \"stdio\" \"write\" (param i32 i32))");
                 Formatter.NewLine();
 
                 Switch(PrecedingType.Memory);

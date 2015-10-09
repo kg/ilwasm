@@ -20,6 +20,17 @@ def get_libs(fileName):
     os.path.join(os.path.dirname(fileName), match.group(1)) for match in libComments
   )
 
+def get_stdout_path(fileName):
+  with open(fileName, "r") as f:
+    text = f.read()
+
+  m = re.search("SetStdout\\(\"([^\"]*)\"\\);", text)
+
+  if m:
+    return m.group(1)
+  else:
+    return None
+
 def compile_cs(fileName):
   if platform.system() == "Windows":
     csc = "csc"
@@ -47,7 +58,7 @@ def compile_cs(fileName):
       break
 
   if isNewer:
-    return (0, compiledPath)
+    return (0, compiledPath, get_stdout_path(fileName))
 
   fileNames = [fileName] + libs
 
@@ -63,7 +74,7 @@ def compile_cs(fileName):
     print("failed while running '%s'" % commandStr)
     print("")
 
-  return (exitCode, compiledPath)
+  return (exitCode, compiledPath, get_stdout_path(fileName))
 
 def translate(compiledPath):
   wasmPath = compiledPath.replace(".exe", ".wasm")
@@ -98,22 +109,40 @@ def run_csharp(compiledPath):
 
   return exitCode
 
-def run_wasm(wasmPath):
+def run_wasm(wasmPath, stdoutPath):
   interpreterPath = os.path.realpath(os.path.join("..", "wasm-spec", "ml-proto", "_build", "host", "main.d.byte"))
 
   commandStr = ("%s %s") % (interpreterPath, wasmPath)
+
+  csDataPath = None
+  wasmDataPath = None
+  csBytes = None
+  wasmBytes = None
+
+  if stdoutPath:
+    csDataPath = os.path.join("output", "cs-data", stdoutPath)
+    wasmDataPath = os.path.join("output", "wasm-data", stdoutPath)
+    commandStr += " > " + wasmDataPath
+
   exitCode = subprocess.call(commandStr, shell=True)
 
   if exitCode != 0:
     print("failed while running '%s'" % commandStr)
     print("")
 
-  return exitCode
+  if stdoutPath:
+    with open(csDataPath, "rb") as f:
+      csBytes = f.read()
+
+    with open(wasmDataPath, "rb") as f:
+      wasmBytes = f.read()
+
+  return (exitCode, csBytes, wasmBytes)
 
 
 class RunTests(unittest.TestCase):
   def _runTestFile(self, fileName):
-    (exitCode, compiledPath) = compile_cs(fileName)
+    (exitCode, compiledPath, stdoutPath) = compile_cs(fileName)
     self.assertEqual(0, exitCode, "C# compiler failed with exit code %i" % exitCode)
     (exitCode, wasmPath) = translate(compiledPath)
 
@@ -124,7 +153,9 @@ class RunTests(unittest.TestCase):
 
     exitCode = run_csharp(compiledPath)
     self.assertEqual(0, exitCode, "C# test case failed with exit code %i" % exitCode)
-    exitCode = run_wasm(wasmPath)
+    (exitCode, csBytes, wasmBytes) = run_wasm(wasmPath, stdoutPath)
+
+    self.assertEqual(csBytes, wasmBytes, "C# and wasm output did not match (%s)" % stdoutPath)
 
     if exitCode != 0:
       # HACK: If JSILc fails ensure that the C# compile and JSILc compile are repeated next run
@@ -142,7 +173,7 @@ def generate_test_cases(cls, files):
 
 if __name__ == "__main__":
   try:
-    os.makedirs("output/")
+    os.makedirs("output/wasm-data")
   except OSError:
     pass
 
