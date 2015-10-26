@@ -1,0 +1,8 @@
+language: csharp
+
+install:
+  - ./third_party/JSIL/linux-build.sh
+  - ./linux-build.sh
+
+script:
+  - ./runtests.py
