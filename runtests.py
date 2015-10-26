@@ -110,7 +110,7 @@ def run_csharp(compiledPath):
   return exitCode
 
 def run_wasm(wasmPath, stdoutPath):
-  interpreterPath = os.path.realpath(os.path.join("..", "wasm-spec", "ml-proto", "_build", "host", "main.d.byte"))
+  interpreterPath = os.path.realpath(os.path.join("third_party", "wasm-spec", "ml-proto", "_build", "host", "main.d.byte"))
 
   commandStr = ("%s %s") % (interpreterPath, wasmPath)
 

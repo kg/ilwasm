@@ -9,6 +9,7 @@ install:
   - nuget install FSharp.Compiler.Tools -Version 4.0.0.1 -OutputDirectory ./third_party/JSIL/packages 
   - ./third_party/JSIL/linux-build.sh
   - ./linux-build.sh
+  - ./third_party/wasm-spec/ml-proto/runtests.py --build
 
 script:
   - ./runtests.py

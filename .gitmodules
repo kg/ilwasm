@@ -1,3 +1,7 @@
 [submodule "third_party/JSIL"]
 	path = third_party/JSIL
 	url = https://github.com/sq/JSIL
+[submodule "wasm-spec"]
+	path = third_party/wasm-spec
+	url = https://github.com/kg/spec.git
+	branch = stdio_write
