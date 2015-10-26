@@ -23,7 +23,12 @@ namespace WasmSExprEmitter {
             }
         }
 
-        public IAssemblyEmitter MakeAssemblyEmitter (AssemblyTranslator translator, AssemblyDefinition assembly, JavascriptFormatter formatter) {
+        public IAssemblyEmitter MakeAssemblyEmitter (
+            AssemblyTranslator translator,
+            AssemblyDefinition assembly,
+            JavascriptFormatter formatter,
+            IDictionary<AssemblyManifest.Token, string> referenceOverrides
+        ) {
             if (translator.IsStubbed(assembly) || translator.IsIgnored(assembly))
                 return new NullAssemblyEmitter();
             else
