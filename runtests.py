@@ -87,7 +87,7 @@ def translate(compiledPath):
   except OSError:
     pass
 
-  commandStr = ("%s ilwasm.jsilconfig --quiet --nodefaults --e=WasmSExpr --outputFile=%s %s") % (
+  commandStr = ("mono %s ilwasm.jsilconfig --quiet --nodefaults --e=WasmSExpr --outputFile=%s %s") % (
     os.path.join("third_party", "JSIL", "bin", "JSILc.exe"),
     wasmPath, compiledPath
   )
@@ -100,7 +100,7 @@ def translate(compiledPath):
   return (exitCode, wasmPath)
 
 def run_csharp(compiledPath):
-  commandStr = ("%s --quiet") % (compiledPath)
+  commandStr = ("mono %s --quiet") % (compiledPath)
   exitCode = subprocess.call(commandStr, shell=True)
 
   if exitCode != 0:
