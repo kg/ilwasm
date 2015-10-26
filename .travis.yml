@@ -1,6 +1,7 @@
 language: csharp
 
 install:
+  - git submodule update --init --recursive # really? REALLY?
   - ./third_party/JSIL/linux-build.sh
   - ./linux-build.sh
 
