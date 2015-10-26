@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPTPATH=`realpath "$BASH_SOURCE"`
+SCRIPTPATH=`readlink -f "$BASH_SOURCE"`
 ILWASMDIR=`dirname $SCRIPTPATH`
 JSILDIR=$ILWASMDIR/third_party/JSIL
 
