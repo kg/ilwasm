@@ -2,6 +2,11 @@ language: csharp
 
 install:
   - git submodule update --init --recursive # really? REALLY?
+  - export NODEJS=$(dirname `nvm which $NODEJS_VERSION`)
+  - export FSHARPINSTALLDIR=$(dirname /third_party/JSIL/packages/FSharp.Compiler.Tools.4.0.0.1/tools/)
+  - nuget restore ./third_party/JSIL/JSIL.sln
+  - nuget install NUnit.Runners -Version 2.6.4 -OutputDirectory ./third_party/JSIL/packages 
+  - nuget install FSharp.Compiler.Tools -Version 4.0.0.1 -OutputDirectory ./third_party/JSIL/packages 
   - ./third_party/JSIL/linux-build.sh
   - ./linux-build.sh
 
