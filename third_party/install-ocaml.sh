@@ -15,7 +15,7 @@ fi
 tar xfz ocaml-4.02.2.tar.gz
 cd ocaml-4.02.2
 mkdir ../ocaml-install
-PREFIX=`dirname ../ocaml-install`
+PREFIX=`readlink -f "../ocaml-install"`
 echo PREFIX = $PREFIX
 ./configure -prefix $PREFIX
 make world.opt
