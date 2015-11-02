@@ -7,7 +7,7 @@ install:
   - ./third_party/JSIL/linux-build.sh
   - ./linux-build.sh
   - source ./third_party/install-ocaml.sh
-  - ls -la $OCAML_INSTALL_DIR
+  - ls -la $OCAML_INSTALL_DIR/bin
   - pushd ./third_party/wasm-spec/ml-proto ; ./runtests.py --build ; popd
 
 script:

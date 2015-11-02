@@ -20,5 +20,5 @@ echo OCAML_INSTALL_DIR=$OCAML_INSTALL_DIR
 ./configure -prefix $OCAML_INSTALL_DIR
 make world.opt
 make install
-export PATH=${PREFIX}:$PATH
+export PATH=${OCAML_INSTALL_DIR}/bin:$PATH
 popd
