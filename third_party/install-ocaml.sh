@@ -15,7 +15,7 @@ fi
 tar xfz ocaml-4.02.2.tar.gz
 cd ocaml-4.02.2
 mkdir ../ocaml-install
-./configure -prefix $(dirname ../ocaml-install)
+./configure -prefix `dirname ../ocaml-install`
 make world.opt
 make install
 popd
