@@ -2,12 +2,6 @@
 
 set -e
 
-# Move to a location relative to the script so it runs
-# from anywhere. Go two levels down to get out of ml-proto
-# and into the top-level dir, since we'll run ocamlbuild
-# inside of ml-proto and it goes pear-shaped if it
-# encounters ocaml's own build directory.
-
 rm -rf ocaml
 mkdir ocaml
 pushd ocaml
@@ -20,8 +14,8 @@ if [ ${CHECKSUM} != \
 fi
 tar xfz ocaml-4.02.2.tar.gz
 cd ocaml-4.02.2
-./configure -prefix $PWD/../install
+mkdir ../ocaml-install
+./configure -prefix ../ocaml-install
 make world.opt
-mkdir ../install
 make install
 popd
