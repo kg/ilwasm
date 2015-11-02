@@ -20,4 +20,5 @@ echo PREFIX = $PREFIX
 ./configure -prefix $PREFIX
 make world.opt
 make install
+export PATH=${PREFIX}:$PATH
 popd

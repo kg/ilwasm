@@ -6,8 +6,8 @@ install:
   - nuget restore ./third_party/JSIL/JSIL.sln
   - ./third_party/JSIL/linux-build.sh
   - ./linux-build.sh
-  - ./third_party/install-ocaml.sh
-  - export PATH=$(dirname ./ocaml-install/):$PATH
+  - source ./third_party/install-ocaml.sh
+  - ls -la ./third_party/ocaml-install
   - pushd ./third_party/wasm-spec/ml-proto ; ./runtests.py --build ; popd
 
 script:
